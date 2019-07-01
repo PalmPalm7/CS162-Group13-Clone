@@ -3,7 +3,7 @@ Design Document for Project 1: Threads
 
 ## Group Members
 
-* FirstName LastName <email@domain.example>
+* Zuxin Li <lizx2019@berkeley.edu>
 * FirstName LastName <email@domain.example>
 * FirstName LastName <email@domain.example>
 * FirstName LastName <email@domain.example>
