@@ -2,22 +2,14 @@
 
 ### Data structures and functions
 ```
-#define LIST_NUM =64
-struct multi_queue
-{
-  struct list thread_lists[LIST_NUM];
-  struct list blocked_list;
-}
-static struct thread * next_thread_to_run(void); //change ready list and enable mlfqs
+static struct thread * next_thread_to_run(void); //involk fetch_thread() and enable mlfqs
 static struct thread * running_thread(); //change ready list and enable mlfqs
-void thread_init(void) //change ready list
-void thread_unblock(struct thread *t) //add it into previous thread_lists
+void thread_unblock(struct thread *t) //add it into thread_lists
 void thread_block(struct thread *t) // add it into blocked_list
-void thread_yield(void)// add to the end of thread_lists
-static struct thread * fetch_thread()// the next_thread_to_run should call that, scan through the thread list 
-static void init_thread(struct thread*t, chonst char *name, int priority);
-void thread_schedule_tail(struct thread *prev);// reset the priority
-int thread_get_nice(void)
+static struct thread * fetch_thread()// the next_thread_to_run should call that, scan through the thread list , then fetch the correct one
+static void init_thread(struct thread*t, chonst char *name, int priority); set the priority 
+void thread_schedule_tail(struct thread *prev);// reset the priority then sent back to the thread_lists
+int thread_get_nice(void)  // get the thead`s nice vallue
 void thread_set_nice(int new_nice)
 int thread_get_recent_cpu(void)
 int thread_get_load_avg(void)
