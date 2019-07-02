@@ -2,12 +2,6 @@
 
 ### Data structures and functions
 ```
-#define LIST_NUM =64
-struct multi_queue
-{
-  struct list thread_lists[LIST_NUM];
-  struct list blocked_list;
-}
 static struct thread * next_thread_to_run(void); //change ready list and enable mlfqs
 static struct thread * running_thread(); //change ready list and enable mlfqs
 void thread_init(void) //change ready list
