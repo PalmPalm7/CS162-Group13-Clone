@@ -12,7 +12,7 @@ struct queue_elem{
     int external_donation;//This member is added to avoid priority inversion
     int internal_donation;//This member is added to avoid starvation. When a thread is blocked or waiting for some resources for too long,it increases.
 };
-
+g
 ```
 ```
 struct queue
@@ -73,5 +73,28 @@ this part is for handi, to illustarte priority donation.
 
 
 ###Synchronization
+####1.Multiple Threads Access same lock and  semaphore
+When a thread  is acquiring a lock/semaphore,it will disable interrupt  utill this  thread successfully get a lock or put itself to the waiting list,which means acquiring a lock/semaphore is atomic and there is no thread switching  when a thread is trying to acquire a lock/semaphore.So we could say acquiring lock and semaphore is thread-safe.
+
+####2.Accessing shared variable
+There is two possible circumstances when different Threads access shared variable.
+ 
+ - A  normal thread  **A** is accessing a shared variable and we could use a lock or a semaphore to synchronize this shared variable if necessary.And when another thread **B** preempts, it encounter a lock and it will put itself in waiting list and block itself,choosing next thread to run.
+ - A  normal thread  **A** is accessing a shared variable and we could use a lock or a semaphore to synchronize this shared variable if necessary.However if an interrupt happens some interrupt handlers run and when it encouters a lock  they will try acquire a lock if they successful acquire a lock handlers continue ,if they fails the handlers won't put themselves to waiting list and they maybe continue to run without accessing the variable or abort.
+
+
+####3.List and other data structure
+List and other data structure may not be thread sate in pintos, so sometimes we could use lock to restrict mutiple threads modifying same pointers simultaneous.
+ 
+####4.calling functions
+When two threas call a same function if they do not access shared variable they don't have any problems of synchronization. Or if they deed access shared variable ,use lock or semaphore just mentioned in part 2.
+
+####5.Memory deallocation
+A page of thread will be deallocated only when function `thread_schedule_tail` is being called.And in this function the thread which tagged *THREAD_DYING* could be released.And only the function exit, a thread could be tagged with *THREAD_DYING*.So if we do not modify the code of `thread_schedule_tail` and do not change  when a thread should be tagged  with *THREAD_DYING*, the memory of running thread coudn't be deallocated.
+
+
+
+
+
 
 ###Rationale
