@@ -38,16 +38,17 @@ by calling
 
  we got load average.
 
-Then we fetch nice value of a thread, and use it to calculate recent CPU time.First we set recent CPU as 0, then we use formula 
-
->	recent_cpu = (2*load_avg)/(2*load_avg+1)*recent_cpu+nice.
-
+Then we fetch nice value of a thread, and use it to calculate recent CPU time.First we set recent_cpu = recent_cpu + 1, 
 and then we get the recent_cpu value, finally we called
 
 >	priority = PRI_MAX - (recent_cpu / 4) - (nice * 2)
 
 and we got the priority
 Here, we are using the fixed point value in the middle of the calculation ,then get the integer as the output in each step.`
+
+after each second, we update recent_cpu  in thread_tick by
+
+>	recent_cpu = (2*load_avg)/(2*load_avg+1)*recent_cpu+nice.
 
 ### Synchronization
 
@@ -64,3 +65,18 @@ This design is useful for the situation that we need to handle many threads( typ
   In our current design, it may be less efficient if there is too much thread in the kernel, which is unlikely happended in pintos. Since we have ready-to-work data structure, there would not be too much code to be written, just to calculate the priority and choose the next thread part will need some code. 
   Assume we have n threads in the kernel, the time complexity and space complexity will all be O(n), since we have only one list, and we survey through the ready list to fine the next thread.
   We have considered about extensibility, that is why we choose not to modify next_thread_to_run() directly, because we may want to change another policy for that, for this we can just modify 'fetch_thread()', and leave the other things unchanged.
+
+
+Assume 20ms for a tick                                     
+timer ticks | R(A) | R(B) | R(C) | P(A) | P(B) | P(C) | thread to run
+------------|------|------|------|------|------|------|--------------
+ 0          |  0   |  0   |  0   |  63  |  61  |  59  | A 
+ 4          |  4   |  0   |  0   |  62  |  61  |  59  | A
+ 8          |  8   |  0   |  0   |  61  |  61  |  59  | A
+12          |  12  |  0   |  0   |  60  |  61  |  59  | B
+16          |  12  |  4   |  0   |  60  |  60  |  59  | A
+20          |  16  |  4   |  0   |  59  |  60  |  59  | B
+24          |  16  |  8   |  0   |  59  |  59  |  59  | A
+28          |  20  |  8   |  0   |  58  |  59  |  59  | B
+32          |  20  |  12  |  0   |  58  |  58  |  59  | C
+36          |  20  |  12  |  4   |  58  |  58  |  58  | A
