@@ -2,7 +2,7 @@
 
 ### Data structures and functions
 ```
-struct thread // add load_avg and recent_cpu for priority calculation
+struct thread // add recent_cpu for priority calculation
 static struct thread * next_thread_to_run(void); //involk fetch_thread() and enable mlfqs
 static struct thread * running_thread(); //change ready list and enable mlfqs
 void thread_unblock(struct thread *t) //add it into thread_lists
@@ -14,6 +14,7 @@ int thread_get_nice(void)  // get the thead`s nice value
 void thread_set_nice(int new_nice)// set the thread`s nice value
 int thread_get_recent_cpu(void) //get recent cpu time in moving average
 int thread_get_load_avg(void) //get loaded average
+int load_avg() //hold the load average for calculation
 
 ```
 ### Algorithms
