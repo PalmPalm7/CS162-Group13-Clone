@@ -8,7 +8,7 @@ Design Document for Project 1: Threads
 * FirstName LastName <email@domain.example>
 * FirstName LastName <email@domain.example>
 
-## Alarm Clock
+## Task 1: Efficient Alarm Clock
 ### Data Structures/Functions
 No additional data structure is necessary for the new `timer_sleep()` to be implemented.  The necessary functions to be added will be 
 ```
