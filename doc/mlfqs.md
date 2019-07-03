@@ -67,16 +67,17 @@ This design is useful for the situation that we need to handle many threads( typ
   We have considered about extensibility, that is why we choose not to modify next_thread_to_run() directly, because we may want to change another policy for that, for this we can just modify 'fetch_thread()', and leave the other things unchanged.
 
 
-Assume 20ms for a tick                                     
-timer ticks | R(A) | R(B) | R(C) | P(A) | P(B) | P(C) | thread to run
-------------|------|------|------|------|------|------|--------------
- 0          |  0   |  0   |  0   |  63  |  61  |  59  | A 
- 4          |  4   |  0   |  0   |  62  |  61  |  59  | A
- 8          |  8   |  0   |  0   |  61  |  61  |  59  | A
-12          |  12  |  0   |  0   |  60  |  61  |  59  | B
-16          |  12  |  4   |  0   |  60  |  60  |  59  | A
-20          |  16  |  4   |  0   |  59  |  60  |  59  | B
-24          |  16  |  8   |  0   |  59  |  59  |  59  | A
-28          |  20  |  8   |  0   |  58  |  59  |  59  | B
-32          |  20  |  12  |  0   |  58  |  58  |  59  | C
-36          |  20  |  12  |  4   |  58  |  58  |  58  | A
+Assume 20ms for a tick      
+
+| timer ticks | R(A) | R(B) | R(C) | P(A) | P(B) | P(C) | thread to run |
+|---|---|---|---|---|---|---|---|
+|0          |  0   |  0   |  0   |  63  |  61  |  59  | A |
+|4          |  4   |  0   |  0   |  62  |  61  |  59  | A |
+|8          |  8   |  0   |  0   |  61  |  61  |  59  | A |
+|12          |  12  |  0   |  0   |  60  |  61  |  59  | B |
+|16          |  12  |  4   |  0   |  60  |  60  |  59  | A |
+|20          |  16  |  4   |  0   |  59  |  60  |  59  | B |
+|24          |  16  |  8   |  0   |  59  |  59  |  59  | A |
+|28          |  20  |  8   |  0   |  58  |  59  |  59  | B |
+|32          |  20  |  12  |  0   |  58  |  58  |  59  | C |
+|36          |  20  |  12  |  4   |  58  |  58  |  58  | A |
