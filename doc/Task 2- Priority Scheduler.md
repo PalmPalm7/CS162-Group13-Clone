@@ -9,7 +9,10 @@ struct queue_elem{
     struct queue_elem* right_child;
     struct queue_elem* parent;
     int priority;
-    int internal_donation;//This member is added to avoid starvation. When a thread is blocked or waiting for some resources for too long,it increases.
+    int original_priority;//it is same with priority before any priority donation
+    int internal_donation;//This member is added to avoid starvation. 
+    When a thread is blocked or waiting for some resources for too long,it increases.
+    int own_lock;//record current thread own how many locks if it's 0 priority should set to original priority
 };
 g
 ```
