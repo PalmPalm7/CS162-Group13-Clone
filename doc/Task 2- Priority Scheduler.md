@@ -68,9 +68,12 @@ Specificly,if one thread wants to wait for a condition variables it calls functi
 And if a condtion variable is ready,current thread could calls functions `cond_signal` to unblock the thead in waiting list.
 
 #### 7.Changing thread's priority
-this part is for handi, to illustarte priority donation.
+In changing the thread's priority, we modify `int priority` in the thread structure. In the case of a priority donation, whereas a lock is acquired by a low priority thread while a high priority thread is also on the `ready_list`. We should perform a priority donation.
+Get the both the high priority thread and low priority thread's priority level by calling `int thread_get_priority (void)` and save on `int temp_priority_high` and `int temp_priority_low` respectively then set the low priority to `temp_priority_high` by calling `void thread_set_priority (int temp_priority_high)` after the lock is released, change back its priority level using `void thread_set_priority (int temp_priority_low)`
 
 #### 8.priority queue
+Modify the list structure that originially calls struct list from lib/kernel/list.c to a priority queue that could be created from the doubly linked list structure that is implemented in lib/kernel/list.c.
+Time complexity of doubly-linked list is Θ(n) for access Θ(n) for search while we are using priority queue to pop the highest priority in each iteration, so it will have time complexity of Θ(1) for access if no speciic thread is called.
 
 
 
@@ -95,9 +98,10 @@ When two threas call a same function if they do not access shared variable they 
 #### 5.Memory deallocation
 A page of thread will be deallocated only when function `thread_schedule_tail` is being called.And in this function the thread which tagged *THREAD_DYING* could be released.And only the function exit, a thread could be tagged with *THREAD_DYING*.So if we do not modify the code of `thread_schedule_tail` and do not change  when a thread should be tagged  with *THREAD_DYING*, the memory of running thread coudn't be deallocated.
 
-
-
-
-
-
 ###Rationale
+Data structure modification, reasons are described in `8.priority queue`
+As for coding, we would not need much coding from swapping from doubly linked list to a priority queue because it is one of the basic tasks we have learned in data structure.
+As for time complexity, it is explained in `8.priority queue`.
+As for space complexity, doubly linked list and queue both have worst case of O(n).
+We did not modify much since we were basically using the same structure but in a different way.
+We also solved starvation in algorithm secion 4 and 5 (which would be implemented actually in the next task).
