@@ -101,7 +101,7 @@ When two threas call a same function if they do not access shared variable they 
 #### 5.Memory deallocation
 A page of thread will be deallocated only when function `thread_schedule_tail` is being called.And in this function the thread which tagged *THREAD_DYING* could be released.And only the function exit, a thread could be tagged with *THREAD_DYING*.So if we do not modify the code of `thread_schedule_tail` and do not change  when a thread should be tagged  with *THREAD_DYING*, the memory of running thread coudn't be deallocated.
 
-###Rationale
+### Rationale
 Data structure modification, reasons are described in `8.priority queue`
 As for coding, we would not need much coding from swapping from doubly linked list to a priority queue because it is one of the basic tasks we have learned in data structure.
 As for time complexity, it is explained in `8.priority queue`.
