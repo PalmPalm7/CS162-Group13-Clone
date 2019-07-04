@@ -56,7 +56,7 @@ struct queue_elem{
     int own_lock; //Records if a thread currently owns any locks.  If it is set to 0, the thread's priority should not be affected by any locks.
 };
 ```
-The main data structure that will be implemented is a priority queue to store the various threads in the ready state with the thread with the highest priority available easily accessible and will replace the doubly linked list described as `struct thread` in thread.c.  Within the `queue` struct, each `queue_elem` will have possibly null members: a left and right child, parent, priority, the threads original priority, a counter of internal donation, and a counter for whatever locks the thread might currently own.
+The main data structure that will be implemented is a priority queue to store the various threads in the ready state with the thread with the highest priority available easily accessible. This priority queue will replace the doubly linked list described as `struct thread` in thread.c.  Within the `queue` struct, each `queue_elem` will have possibly null members: a left and right child, parent, priority, the threads original priority, a counter of internal donation, and a counter for whatever locks the thread might currently own.
 
 #### 2. New Functions
 
