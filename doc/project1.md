@@ -1,12 +1,7 @@
 Design Document for Project 1: Threads
 ======================================
 
-## Group Members
 
-* Zuxin Li <lizx2019@berkeley.edu>
-* Joshua Alexander <josh.alexander1315@berkeley.edu>
-* Wenzheng Guo <guowz19@berkeley.edu>
-* Handi Xie <hxie13@berkeley.edu>
 
 ## Task 1: Efficient Alarm Clock
 ### Data Structures and Functions
@@ -107,10 +102,10 @@ The list struct from lib/kernel/list.c will be modified to become a priority que
 When a thread is acquiring a lock/semaphore, it will disable interrupts until that thread successfully gets a lock or puts itself on the waiting list. This means acquiring a lock/semaphore is atomic and there is no thread switching when a thread is trying to acquire a lock/semaphore. Therefore, acquiring a lock and semaphore is thread-safe.
 
 #### Accessing Shared Variables
-There are two possible circumstances when different threads access a shared variable. In one scenario, a  normal thread  **A** is accessing a shared variable and will use a lock or a semaphore to synchronize this shared variable if necessary. If another thread **B** preempts **A**, it will encounter a lock and will put itself on the waiting list, block itself, and choose the next thread to run. In the second scenario, a normal thread  **A** is accessing a shared variable and will use a lock or a semaphore to synchronize this shared variable if necessary. However, if an interrupt happens, some interrupt handler will run and encouter a critical section at which point it will try acquire a lock. If it successfully acquires a lock, the handler will continue. Otherwise, the handler won't put itself on the waiting list and will try to continue to run without accessing the variable or aborting.
+There are two possible circumstances when different threads access a shared variable. In one scenario, a  normal thread  **A** is accessing a shared variable and will use a lock or a semaphore to synchronize this shared variable if necessary. If another thread **B** preempts **A**, it will encounter a lock and will put itself on the waiting list, block itself, and choose the next thread to run. In the second scenario, a normal thread  **A** is accessing a shared variable and will use a lock or a semaphore to synchronize this shared variable if necessary. However, if an interrupt happens, some interrupt handler will run and encounter a critical section at which point it will try to acquire a lock. If it successfully acquires a lock, the handler will continue. Otherwise, the handler won't put itself on the waiting list and will try to continue to run without accessing the variable or aborting.
 
 #### Lists and other Data Structures
-Lists and other data structures may not be thread sate in Pintos on their own, but a lock can be used to restrict mutiple threads from modifying the same pointers simultaneously.
+Lists and other data structures may not be thread sate in Pintos on their own, but a lock can be used to restrict multiple threads from modifying the same pointers simultaneously.
  
 #### Calling Functions
 When two threads call the same function, if they do not access shared variables, they don't have any problems with regards to synchronization. However, if they did access a shared variable, a lock or semaphore will be used as described previously.
@@ -141,7 +136,7 @@ int load_avg(); //Hold the load average for calculation
 
 ```
 
-The thread struct will have the new member recent_cpu in order to calculate the priority of the thread.  All functions that rely on the structure of the thread ready list will be slightly modified to accomodate the flag to switch to using the MLFQS. Aditionally, the nice values of threads must now be implemented in order to help determine how willing the threads are to give up their priority.  New functions will also need to be created that calculate and keep track of the load average to ensure fairness among the threads.
+The thread struct will have the new member recent_cpu in order to calculate the priority of the thread.  All functions that rely on the structure of the thread ready list will be slightly modified to accommodate the flag to switch to using the MLFQS. Additionally, the nice values of threads must now be implemented in order to help determine how willing the threads are to give up their priority.  New functions will also need to be created that calculate and keep track of the load average to ensure fairness among the threads.
 
 ### Algorithms
 
@@ -154,7 +149,7 @@ A new thread will be created the same way as it is with the default scheduler, b
 
 #### Changing a Thread's Priority
 
-  When `schedule()` is called, if the thread has not finished executing, the priority will be re-calculated for the thread and it will be added to the bottom of the list.
+  When `schedule()` is called, if the thread has not finished executing, the priority will be re-calculated for the thread, and it will be added to the bottom of the list.
 
 #### Calculating the Priority
 
@@ -165,7 +160,7 @@ Every second, `recent_cpu` will be calculated according to the formula `recent_c
 
 ### Synchronization
 
-When the kernel calls the scheduler, interrupts are turned off so there is no need for considering any new synchronization issues. It is safe to assume that since Pintos runs without synchronization conflict prior to these modifications, it will continue to do so after them.
+When the kernel calls the scheduler, interrupts are turned off, so there is no need for considering any new synchronization issues. It is safe to assume that since Pintos runs without synchronization conflict prior to these modifications, it will continue to do so after them.
 
 ### Rationale
 
@@ -173,20 +168,20 @@ When the kernel calls the scheduler, interrupts are turned off so there is no ne
 Create 64 lists, each responsible for 1 priority, when scheduling happens, the thread will be moved into the list that fits its priority. This design is useful for the given situation that many threads need to be handled (typically more than 64). However, since it is rare for there to be that many ready threads in Pintos, many of the lists may be empty in most of the time. Additionally, if this design is chosen, all the functions related with ready_list will need to be heavily modified, thus this is not the choice. 
 
 #### Alternative design 2
-Make more than one list (for example 2), and destribute threads into those lists by their priority. For example, threads with priority higher than 31 should go to list 1, while the rest should go to list 0. Similarly, it takes less time to find a thread to run, but it takes up more memory, and a lot of code will need to be greatly altered to implement that, creating an unnecessarily complex program.
+Make more than one list (for example 2), and distribute threads into those lists by their priority. For example, threads with a priority higher than 31 should go to list 1, while the rest should go to list 0. Similarly, it takes less time to find a thread to run, but it takes up more memory, and a lot of code will need to be greatly altered to implement that, creating an unnecessarily complex program.
 
-With the proposed design, it may be less efficient if there are too many threads in the kernel, but this situation is unlikely to occur in pintos. Since ready-to-work data structures are available, the existing structure of Pintos will remain mostly intact. Assume we have n threads in the kernel, the time complexity and space complexity will all be O(n), since we have only one list, and we survey through the ready list to find the next thread. We chose not to modify `next_thread_to_run()` directly, and instead modify `fetch_thread()`.
+With the proposed design, it may be less efficient if there are too many threads in the kernel, but this situation is unlikely to occur in pintos. Since ready-to-work data structures are available, the existing structure of Pintos will remain mostly intact. Assume we have n threads in the kernel, the time complexity, and space complexity will all be O(n), since we have only one list, and we survey through the ready list to find the next thread. We chose not to modify `next_thread_to_run()` directly, and instead modify `fetch_thread()`.
 
 ## Additional Questions
 
 ### 1. Effective Priority Test Case
-Create 3 threads: `thread1` with priority 1, `thread2` with priority 2, and `thread3` with priority 3. Have `thread1` and `thread3` both recquire a lock to access a section that prints the name of the current thread. Additionally, `thread2` should print out its name right before it finishes executing.  Ready `thread1` first and have it acquire the lock.  Then, as soon as it acquires a lock, ready `thread2` and `thread3` and continue until all 3 until they have finished.  The correct output should be 
+Create 3 threads: `thread1` with priority 1, `thread2` with priority 2, and `thread3` with priority 3. Have `thread1` and `thread3` both re-acquire a lock to access a section that prints the name of the current thread. Additionally, `thread2` should print out its name right before it finishes executing.  Ready `thread1` first and have it acquire the lock.  Then, as soon as it acquires a lock, ready `thread2` and `thread3` and continue until all 3 until they have finished.  The correct output should be 
 ```
 thread1
 thread3
 thread2
 ```
-This is because `thread1` should accept a priority donation once `thread3` asks to acquire the lock that `thread1` currently has.  Therefore, `thread1` will have its priority raised to 3 and finish executing the portion of its code that recquires the lock and print `thread1` first.  However, the actual output will be 
+This is because `thread1` should accept a priority donation once `thread3` asks to acquire the lock that `thread1` currently has.  Therefore, `thread1` will have its priority raised to 3 and finish executing the portion of its code that re-acquires the lock and prints `thread1` first.  However, the actual output will be 
 ```
 thread2
 thread1
@@ -198,9 +193,9 @@ This is because `thread2` will execute and print after `thread3` reaches the poi
 
 Since there is a `#define TIMER_FREQ 100` in the timer.h, which means 100 timer ticks for a second,
 and `#define TIME_SLICE 4` in thread.c implements that 4 ticks for a time slice.
-Then there is 25 slices in one second, each slice are 40 ms lenth.
-For each time tick the recent_cpu add by 1, which is shown on the table.
-For each second the recent_cpu is updated with the formular, which did not appears in the table.
+Then there is 25 slices in one second, each slice are 40 ms length.
+For each time tick, the recent_cpu add by 1, which is shown on the table.
+For each second the recent_cpu is updated with the formula, which did not appear in the table.
 
 | timer ticks | R(A) | R(B) | R(C) | P(A) | P(B) | P(C) | thread to run |
 |---|---|---|---|---|---|---|---|
@@ -216,4 +211,4 @@ For each second the recent_cpu is updated with the formular, which did not appea
 |36          |  20  |  12  |  4   |  58  |  58  |  58  | C |
 
 ### 3. Ambiguities
-Since there is no specific policy when dealing with threads with the same priority level outlined in the spec, FCFS will be used to determine which thread goes first. All functions assume no timer tick is consumed during calculation.
+Since there is no specific policy when dealing with threads with the same priority level outlined in the spec, FCFS will be used to determine which thread goes first. All functions assume no timer tick is consumed during the calculation.
