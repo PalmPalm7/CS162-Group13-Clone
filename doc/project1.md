@@ -94,42 +94,32 @@ The priority scheduling for locks depends on interactions with semaphores. The p
 In Pintos, condition variables combine semaphores and locks. Pintos maps one lock to multiple condition variables and uses semaphores, which are initialized to 0, to materialize a waiting list. Specifically, if one thread wants to wait for a condition variable, it calls the function `cond_wait` to block itself, add itself to the waiting list, and find the next thread to run. If a condtion variable is ready, the current thread will call the function `cond_signal` to unblock the thead in waiting list.
 
 #### Changing a Thread's Priority
-In changing the thread's priority, `int priority` will be modified in the thread struct. When a lock is acquired by a low priority thread while a high priority thread is also on the ready list and attempts to acquire that lock, a priority donation will occur. Both the high priority thread and low priority thread's priority level will be obtaied by calling `int thread_get_priority (void)` and saved at `int temp_priority_high` and `int temp_priority_low` respectively. Then, the effective priority of the thread with the lower base priority will be set to `temp_priority_high` by calling `void thread_set_priority (int temp_priority_high)`. After the lock is released, the thread that had its priority increased will be changed back to its initial priority level prior to the donation using `void thread_set_priority (int temp_priority_low)`. However, in some circumstances, this method may encounter some unexpected problems. For example, a thread could never recover our orginal priority in the condition of nested priority donation.So we add the `own_lock` and `original_priority` to recover the original priority of a thead when a thread release all locks.
+In changing the thread's priority, `int priority` will be modified in the thread struct. When a lock is acquired by a low priority thread while a high priority thread is also on the ready list and attempts to acquire that lock, a priority donation will occur. Both the high priority thread and low priority thread's priority level will be obtained by calling `int thread_get_priority (void)` and saved at `int temp_priority_high` and `int temp_priority_low` respectively. Then, the effective priority of the thread with the lower base priority will be set to `temp_priority_high` by calling `void thread_set_priority (int temp_priority_high)`. After the lock is released, the thread that had its priority increased will be changed back to its initial priority level prior to the donation using `void thread_set_priority (int temp_priority_low)`. However, in some circumstances, this method may encounter some unexpected problems. For example, a thread could never recover its orginal priority in the condition of nested priority donations. To combat this, the `own_lock` and `original_priority` members of the thread's `queue_elem` will be used to recover the original priority of a thead when all locks are released.
 
 #### Priority queue
-The list structure that originially calls struct list from lib/kernel/list.c will be modified to become a priority queue that could be created from the doubly linked list structure that is implemented in lib/kernel/list.c.
-Time complexity of doubly-linked list is Θ(n) for access Θ(n) for search while we are using priority queue to pop the highest priority in each iteration, so it will have time complexity of Θ(1) for access if no speciic thread is called.
+The list struct from lib/kernel/list.c will be modified to become a priority queue. Time complexity of doubly-linked list is Θ(n) for accesses and Θ(n) for searches. Since the priority queue will be used to pop the highest priority in each iteration, it will have time complexity of Θ(1) for accesses if no speciic thread is called.
 
 
 
 
 ### Synchronization
 #### 1. Multiple Threads Accessing the same Lock and Semaphore
-When a thread  is acquiring a lock/semaphore, it will disable interrupt utill this thread successfully get a lock or put itself to the waiting list,which means acquiring a lock/semaphore is atomic and there is no thread switching  when a thread is trying to acquire a lock/semaphore. So we could say acquiring lock and semaphore is thread-safe.
+When a thread  is acquiring a lock/semaphore, it will disable interrupts utill that thread successfully gets a lock or puts itself on the waiting list. This means acquiring a lock/semaphore is atomic and there is no thread switching when a thread is trying to acquire a lock/semaphore. Therefore, acquiring lock and semaphore is thread-safe.
 
 #### 2. Accessing Shared Variables
-There are two possible circumstances when different Threads access shared variable.
- 
- - A  normal thread  **A** is accessing a shared variable and we could use a lock or a semaphore to synchronize this shared variable if necessary. And when another thread **B** preempts, it encounter a lock and it will put itself in waiting list and block itself, choosing next thread to run.
- - A  normal thread  **A** is accessing a shared variable and we could use a lock or a semaphore to synchronize this shared variable if necessary. However if an interrupt happens some interrupt handlers run and when it encouters a lock they will try acquire a lock if they successful acquire a lock handlers continue, if they fails the handlers won't put themselves to waiting list and they maybe continue to run without accessing the variable or abort.
-
+There are two possible circumstances when different threads access a shared variable. In one scenario, a  normal thread  **A** is accessing a shared variable and will use a lock or a semaphore to synchronize this shared variable if necessary. If another thread **B** preempts **A**, it will encounter a lock and will put itself on the waiting list, block itself, and choose the next thread to run. In the second scenario, a normal thread  **A** is accessing a shared variable and will use a lock or a semaphore to synchronize this shared variable if necessary. However, if an interrupt happens, some interrupt handler will run and encouter a critical section at which point it will try acquire a lock. If it successfully acquires a lock, the handler will continue. Otherwise, the handler won't put itself on the waiting list and will try to continue to run without accessing the variable or aborting.
 
 #### 3. Lists and other Data Structures
-Lists and other data structure may not be thread sate in pintos on their own, but a lock can be used to restrict mutiple threads modifying same pointers simultaneous.
+Lists and other data structures may not be thread sate in Pintos on their own, but a lock can be used to restrict mutiple threads from modifying the same pointers simultaneously.
  
 #### 4. Calling Functions
-When two threas call a same function if they do not access shared variable they don't have any problems of synchronization. Or if they deed access shared variable ,use lock or semaphore just mentioned in part 2.
+When two threads call the same function, if they do not access shared variables, they don't have any problems with regards to synchronization. However, if they did access a shared variable, a lock or semaphore will be used as described previously.
 
 #### 5. Memory Deallocation
-A page of thread will be deallocated only when function `thread_schedule_tail` is being called.And in this function the thread which tagged *THREAD_DYING* could be released. And only the function exit, a thread could be tagged with *THREAD_DYING*.So if we do not modify the code of `thread_schedule_tail` and do not change  when a thread should be tagged  with *THREAD_DYING*, the memory of running thread coudn't be deallocated.
+A thread will only be deallocated when the function `thread_schedule_tail` is called. In this function, the thread tagged *THREAD_DYING* will be released. Once the function exits, another thread could be tagged *THREAD_DYING*. `thread_schedule_tail` will be modified to prevent the memory of the running thread from remaining allocated.
 
 ### Rationale
-Data structure modification, reasons are described in `8.priority queue`
-As for coding, we would not need much coding from swapping from a doubly linked list to a priority queue because it is one of the basic tasks we have learned in data structure.
-As for time complexity, it is explained in `8.priority queue`.
-As for space complexity, doubly linked list and queue both have worst case of O(n).
-We did not modify much since we were basically using the same structure but in a different way.
-We also solved starvation in algorithm secion 4 and 5 (which would be implemented actually in the next task).
+A priority queue was chosen to store the threads due to the ease of creation and ability to efficiently provide the thread with the highest priority as described above. Others have proven that this priority queue will be no worse in terms of asymptotic space growth than the existing doubly linked list struct.  The listed method of obtaining and acquiring locks helps to prevent data races and ensure that all threads can return to their original priorities following priority donation.
 
 ## Task 3: Multi-level Feedback Queue Schedule
 
