@@ -166,7 +166,7 @@ int load_avg() //hold the load average for calculation
 
 - Changing thread`s priority
 
-  This happened in scheduling. When schedule() is called, and the thread has not finished, we re-calculate the priority for the thread, then put it back to the list.
+  This happened in scheduling. When schedule() is called, and the thread has not finished, we re-calculate the priority for the thread, then put it back to the bottom of the list.
 
 - Calculate the priority
 
@@ -223,21 +223,24 @@ This is because `thread2` will execute and print after `thread3` reaches the poi
 
 ### 2. MLFQS Scheduler Table
 
-
-Assume 20ms for a tick      
+Since there is a `#define TIMER_FREQ 100` in the timer.h, which means 100 timer ticks for a second,
+and `#define TIME_SLICE 4` in thread.c implements that 4 ticks for a time slice.
+Then there is 25 slices in one second, each slice are 40 ms lenth.
+For each time tick the recent_cpu add by 1, which is shown on the table.
+For each second the recent_cpu is updated with the formular, which did not appears in the table.
 
 | timer ticks | R(A) | R(B) | R(C) | P(A) | P(B) | P(C) | thread to run |
 |---|---|---|---|---|---|---|---|
 |0          |  0   |  0   |  0   |  63  |  61  |  59  | A |
 |4          |  4   |  0   |  0   |  62  |  61  |  59  | A |
-|8          |  8   |  0   |  0   |  61  |  61  |  59  | A |
-|12          |  12  |  0   |  0   |  60  |  61  |  59  | B |
-|16          |  12  |  4   |  0   |  60  |  60  |  59  | A |
-|20          |  16  |  4   |  0   |  59  |  60  |  59  | B |
-|24          |  16  |  8   |  0   |  59  |  59  |  59  | A |
-|28          |  20  |  8   |  0   |  58  |  59  |  59  | B |
-|32          |  20  |  12  |  0   |  58  |  58  |  59  | C |
-|36          |  20  |  12  |  4   |  58  |  58  |  58  | A |
+|8          |  8   |  0   |  0   |  61  |  61  |  59  | B |
+|12          |  12  |  0   |  0   |  61  |  60  |  59  | A |
+|16          |  12  |  4   |  0   |  60  |  60  |  59  | B |
+|20          |  16  |  4   |  0   |  60  |  59  |  59  | A |
+|24          |  16  |  8   |  0   |  59  |  59  |  59  | C |
+|28          |  20  |  8   |  0   |  59  |  59  |  58  | B |
+|32          |  20  |  12  |  0   |  59  |  58  |  58  | A |
+|36          |  20  |  12  |  4   |  58  |  58  |  58  | C |
 
 ### 3. Ambiguities
 - Since there is no specific policy when dealing with threads with the same priority level, we use FCFS to calculate.
