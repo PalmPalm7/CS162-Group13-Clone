@@ -245,5 +245,5 @@ Assume 20ms for a tick
 |36          |  20  |  12  |  4   |  58  |  58  |  58  | A |
 
 ### 3. Ambiguities
-1. Since there is no specific policy when dealing with threads with the same priority level, we use FCFS to calculate.
-2. We assume no timer tick is consumed during calculation.
+- Since there is no specific policy when dealing with threads with the same priority level, we use FCFS to calculate.
+- We assume no timer tick is consumed during calculation.
