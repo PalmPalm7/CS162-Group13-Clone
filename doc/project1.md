@@ -103,19 +103,19 @@ The list struct from lib/kernel/list.c will be modified to become a priority que
 
 
 ### Synchronization
-#### 1. Multiple Threads Accessing the same Lock and Semaphore
+#### Multiple Threads Accessing the same Lock and Semaphore
 When a thread  is acquiring a lock/semaphore, it will disable interrupts utill that thread successfully gets a lock or puts itself on the waiting list. This means acquiring a lock/semaphore is atomic and there is no thread switching when a thread is trying to acquire a lock/semaphore. Therefore, acquiring lock and semaphore is thread-safe.
 
-#### 2. Accessing Shared Variables
+#### Accessing Shared Variables
 There are two possible circumstances when different threads access a shared variable. In one scenario, a  normal thread  **A** is accessing a shared variable and will use a lock or a semaphore to synchronize this shared variable if necessary. If another thread **B** preempts **A**, it will encounter a lock and will put itself on the waiting list, block itself, and choose the next thread to run. In the second scenario, a normal thread  **A** is accessing a shared variable and will use a lock or a semaphore to synchronize this shared variable if necessary. However, if an interrupt happens, some interrupt handler will run and encouter a critical section at which point it will try acquire a lock. If it successfully acquires a lock, the handler will continue. Otherwise, the handler won't put itself on the waiting list and will try to continue to run without accessing the variable or aborting.
 
-#### 3. Lists and other Data Structures
+#### Lists and other Data Structures
 Lists and other data structures may not be thread sate in Pintos on their own, but a lock can be used to restrict mutiple threads from modifying the same pointers simultaneously.
  
-#### 4. Calling Functions
+#### Calling Functions
 When two threads call the same function, if they do not access shared variables, they don't have any problems with regards to synchronization. However, if they did access a shared variable, a lock or semaphore will be used as described previously.
 
-#### 5. Memory Deallocation
+#### Memory Deallocation
 A thread will only be deallocated when the function `thread_schedule_tail` is called. In this function, the thread tagged *THREAD_DYING* will be released. Once the function exits, another thread could be tagged *THREAD_DYING*. `thread_schedule_tail` will be modified to prevent the memory of the running thread from remaining allocated.
 
 ### Rationale
