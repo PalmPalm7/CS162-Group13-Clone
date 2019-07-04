@@ -71,9 +71,7 @@ int queue_size(struct queue* queue); //Return the size a priority queue
 
 ### Algorithms
 #### Selecting the next Thread to Run
-Currently, the strategy pintos used to chose the next thread to run is by calling a function `list_pop_front` which will pop an element from the ready list.
-
-However, this modification will change the ready list from a linked list to the aforementioned priority queue to store the threads in the ready state. The function `list_pop_front` will be changed to `queue_pop` which will pop out an element with the highest priority if the priority queue is not empty or return *NULL* if it is empty.
+Currently, the strategy pintos used to chose the next thread to run is calling the function `list_pop_front` which will pop an element from the ready list. However, the proposed modification will change the ready list from a linked list to the aforementioned priority queue to store the threads in the ready state. The function `list_pop_front` will be changed to `queue_pop` which will pop out an element with the highest priority if the priority queue is not empty or return *NULL* if it is empty.
 
 #### Acquiring and Releasing a Lock
 The implementation of `lock_acquire`, `lock_try_acquire` and `lock_release` will just call the functions `sema_down`, `sema_try_down` and `sema_up`. 
@@ -82,7 +80,7 @@ The implementation of `lock_acquire`, `lock_try_acquire` and `lock_release` will
 
 `sema_down` and `sema_try_down` will be built to handle two different situations.
 
-For an interrupt handler: if a program wants to acquire a lock, it will call the `sema_try_down` function.  If `semaphore.value` is 0, this function will return false and the interrupt handler will abort because an interrupt handler can't sleep or be added to a waiting list. Otherwise, it will decrement `semaphore.value` by 1 and return true. The interrupt handler would know it already acquired a lock and will execute the next line of code. 
+If an interrupt handler wants to interact with semaphores, it will call the `sema_try_down` function.  If `semaphore.value` is 0, this function will return false and the interrupt handler will abort because an interrupt handler can't sleep or be added to a waiting list. Otherwise, it will decrement `semaphore.value` by 1 and return true. 
 
 If a normal thread wants to acquire a lock, it will call the `sema_down` function which decrements  `semaphore.value` by 1. If `semaphore.value` is 0 at this point, the current thread will be added to the waiting priority queue and call `thread_block` to unblock itself and find the next thread to run.
 
@@ -90,9 +88,7 @@ If a normal thread wants to acquire a lock, it will call the `sema_down` functio
 The effective priority of a thread is reliant on the original priority, set when the thread is created, and internal donation, modified when an originally low priority thread gets stuck waiting for a lock/semaphore for too long. Effective priority will follow the formula: `effetive priority = original priority + internal donation`
 
 #### Priority Scheduling for Semaphores and Locks
-Just like I mentioned, the priority scheduling for locks depends on semaphores.So we just focus on the strategy of scheduling for semaphores and we just mentions how `sema_down`,`sema_try_down`and`sema_up` three funtions works in two different situations ,so we put our attention on the  increasing strategy of `internal donation`.
-
-When `sema_up` is called and if the waiting priority queue has some members, the thread with highest priority would be pop out. However threads with low priority have little chances to acquire locks/semaphores and starvation happens. To avoid this, every time after the `queue_pop` is called, the value of `internal donation` in **queue_element** of waiting priority queue *plus one*.
+The priority scheduling for locks depends on interactions with semaphores. The previously described strategy of scheduling for semaphores as well as the `sema_down`,`sema_try_down`and`sema_up` funtions will handle most cases. However, internal donation will be handled as follows. As it stands, `sema_up` will be called and if the waiting priority queue has a nonzero amount of members, the thread with highest priority will be popped out. Alternatively, threads with lower priorities have few chances to acquire locks/semaphores and starvation may occur. In order to avoid this, every time after `queue_pop` is called, the value of `internal donation` in the thread's `queue_element` will increment by 1.
 
 #### Priority Scheduling for Condition Variables
 In pintos, condition variables combine semaphores and locks ,it maps one lock to multiple condition variables and it uses semaphores which are initialized to 0 to materialize a waiting list.
@@ -243,5 +239,4 @@ For each second the recent_cpu is updated with the formular, which did not appea
 |36          |  20  |  12  |  4   |  58  |  58  |  58  | C |
 
 ### 3. Ambiguities
-- Since there is no specific policy when dealing with threads with the same priority level, we use FCFS to calculate.
-- We assume no timer tick is consumed during calculation.
+Since there is no specific policy when dealing with threads with the same priority level, FCFS will be used to determine which thread goes first. All functions assume no timer tick is consumed during calculation.
