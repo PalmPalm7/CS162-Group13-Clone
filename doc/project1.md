@@ -5,8 +5,8 @@ Design Document for Project 1: Threads
 
 * Zuxin Li <lizx2019@berkeley.edu>
 * Joshua Alexander <josh.alexander1315@berkeley.edu>
-* FirstName LastName <email@domain.example>
-* FirstName LastName <email@domain.example>
+* Wenzheng Guo <guowz19@berkeley.edu>
+* Handi Xie <hxie13@berkeley.edu>
 
 ## Task 1: Efficient Alarm Clock
 ### Data Structures and Functions
@@ -243,3 +243,7 @@ Assume 20ms for a tick
 |28          |  20  |  8   |  0   |  58  |  59  |  59  | B |
 |32          |  20  |  12  |  0   |  58  |  58  |  59  | C |
 |36          |  20  |  12  |  4   |  58  |  58  |  58  | A |
+
+### 3. Ambiguities
+1. Since there is no specific policy when dealing with threads with the same priority level, we use FCFS to calculate.
+2. We assume no timer tick is consumed during calculation.
