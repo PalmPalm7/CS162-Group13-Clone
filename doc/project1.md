@@ -12,7 +12,7 @@ Design Document for Project 1: Threads
 ### Data Structures and Functions
 No additional data structure is necessary for the new `timer_sleep()` to be implemented.  The necessary functions to be added will be 
 ```
-thread_current()->status = THREAD_BLOCKED 
+thread_current()->status = THREAD_BLOCKED; 
 ```
 when the thread is put to sleep and 
 ```
@@ -85,7 +85,7 @@ If an interrupt handler wants to interact with semaphores, it will call the `sem
 If a normal thread wants to acquire a lock, it will call the `sema_down` function which decrements  `semaphore.value` by 1. If `semaphore.value` is 0 at this point, the current thread will be added to the waiting priority queue and call `thread_block` to unblock itself and find the next thread to run.
 
 #### Computing the Effective Priority of a Thread
-The effective priority of a thread is reliant on the original priority, set when the thread is created, and internal donation, modified when an originally low priority thread gets stuck waiting for a lock/semaphore for too long. Effective priority will follow the formula: `effective priority = original priority + internal donation`
+The effective priority of a thread is reliant on the original priority, set when the thread is created, and internal donation, modified when an originally low priority thread gets stuck waiting for a lock/semaphore for too long. Effective priority will follow the formula: `effective priority = priority + internal donation`
 
 #### Priority Scheduling for Semaphores and Locks
 The priority scheduling for locks depends on interactions with semaphores. The previously described strategy of scheduling for semaphores as well as the `sema_down`,`sema_try_down`and`sema_up` funtions will handle most cases. However, internal donation will be handled as follows. As it stands, `sema_up` will be called and if the waiting priority queue has a nonzero amount of members, the thread with highest priority will be popped out. Alternatively, threads with lower priorities have few chances to acquire locks/semaphores and starvation may occur. In order to avoid this, every time after `queue_pop` is called, the value of `internal donation` in the thread's `queue_element` will increment by 1.
@@ -125,66 +125,58 @@ A priority queue was chosen to store the threads due to the ease of creation and
 
 ### Data Structures and Functions
 ```
-struct thread //Add recent_cpu for priority calculation
+struct thread //Add recent_cpu for priority calculation;
 static struct thread * next_thread_to_run(void); //Invoke fetch_thread() and enable mlfqs
-static struct thread * running_thread(); //change ready list and enable mlfqs
-void thread_unblock(struct thread *t) //Add thread into thread_lists
-void thread_block(struct thread *t) //Add thread into blocked_list
-static struct thread * fetch_thread()//Fetches the next_thread_to_run should call that, scan through the thread list , then fetch the correct one
-static void init_thread(struct thread*t, chonst char *name, int priority); set the priority 
-void thread_schedule_tail(struct thread *prev);// reset the priority then sent back to the thread_lists
-int thread_get_nice(void)  // get the thead`s nice value
-void thread_set_nice(int new_nice)// set the thread`s nice value
-int thread_get_recent_cpu(void) //get recent cpu time in moving average
-int thread_get_load_avg(void) //get loaded average
-int load_avg() //hold the load average for calculation
+static struct thread * running_thread(); //Change the ready list and enable mlfqs
+void thread_unblock(struct thread *t); //Add thread into thread_lists
+void thread_block(struct thread *t); //Add thread into blocked_list
+static struct thread * fetch_thread(); //Scan through the thread list, then fetch the correct one
+static void init_thread(struct thread*t, chonst char *name, int priority); Set the priority 
+void thread_schedule_tail(struct thread *prev); // Reset the priority then sent back to the thread_lists
+int thread_get_nice(void);  // Get the thead`s nice value
+void thread_set_nice(int new_nice); // Set the thread`s nice value
+int thread_get_recent_cpu(void); //Get recent cpu time in moving average
+int thread_get_load_avg(void); //Get loaded average
+int load_avg(); //Hold the load average for calculation
 
 ```
+
+The thread struct will have the new member recent_cpu in order to calculate the priority of the thread.  All functions that rely on the structure of the thread ready list will be modified to accomodate the flag to switch to using the MLFQS. Aditionally, the nice values of threads must now be implemented in order to help determine how willing the threads are to give up their priority.  New functions will also need to be created that calculate and keep track of the load average to ensure fairness among the threads.
+
 ### Algorithms
 
-- Creating a new thread
+#### Creating a New Thread
+A new thread will be created the same way as it is with the default scheduler, but with an added nice value and added to the MLFQS list instead.
 
-- Choosing the next thread to run
+#### Choosing the Next Thread to Run
 
-  We do a scan through the list, and marked the highest thread, then we picked up the thread with highest priority and send to the scheduler.
+  The program will start with a scan through the list, mark the highest effective priority thread, and send it to the scheduler.
 
-- Changing thread`s priority
+#### Changing a Thread's Priority
 
-  This happened in scheduling. When schedule() is called, and the thread has not finished, we re-calculate the priority for the thread, then put it back to the bottom of the list.
+  When `schedule()` is called, if the thread has not finished executing, the priority will be re-calculated for the thread and it will be added to the bottom of the list.
 
-- Calculate the priority
+#### Calculating the Priority
 
-  First we need to calculate the load average(initial value 0). since the list_size is already implemented, we just call that to calculate the thread numbers in the ready_list,
-by calling
-``` 
-	load_avg = (59/60) * load_avg +(1/60) * list_size(&ready_list)
-```
- we got load average.
+  The load average (initially 0) can be calculated by calling `list_size`to get the quantity of threads in the ready list and plug it into the equation `load_avg = (59/60) * load_avg +(1/60) * list_size(&ready_list)`
 
-Then we fetch nice value of a thread, and use it to calculate recent CPU time.First we set recent_cpu = recent_cpu + 1, 
-and then we get the recent_cpu value, finally we called
-```
-	priority = PRI_MAX - (recent_cpu / 4) - (nice * 2)
-```
-and we got the priority
-Here, we are using the fixed point value in the middle of the calculation ,then get the integer as the output in each step.`
+The recent CPU time can be calculated using the nice value of a thread. After appropriately incrementing the `recent_cpu` variable, the effective priority can be determined by `priority = PRI_MAX - (recent_cpu / 4) - (nice * 2)`
+Every second, `recent_cpu` will be calculated according to the formula `recent_cpu = (2*load_avg)/(2*load_avg+1)*recent_cpu+nice.`
 
-after each second, we update recent_cpu  in thread_tick by
-```
-	recent_cpu = (2*load_avg)/(2*load_avg+1)*recent_cpu+nice.
-```
 ### Synchronization
 
-When the kernel calls the scheduler, interrupts are turned off so there is no need for considering synchronization issues.
+When the kernel calls the scheduler, interrupts are turned off so there is no need for considering any new synchronization issues. It is safe to assume that since Pintos runs without synchronization conflict prior to these modifications, it will continue to do so after them.
 
 ### Rationale
 
-- Alternative design 1: give 64 lists ,each response for 1 priority, when scheduling happened, we just moved the thread in the lists that fits its priority.
+#### Alternative design 1: 
+Create 64 lists ,each response for 1 priority, when scheduling happened, we just moved the thread in the lists that fits its priority.
 This design is useful for the situation that we need to handle many threads (typically more than 64), while we would not counter so many threads in pintos, so many of the lists may be empty in most of the time. plus, if we choose this kind, we should modify all the functions related with ready_list, thus this is not the choice. 
-- Alternative design 2: give more than one list (for example 2), and we destributed threads into those lists by their priority (for example,threads with priority higher than 31 should go to list 1, otherwise list 0). Similarly, it takes less time to find a thread to run, but it takes up more memories, and we should modify a lot of code to implement that, causing the program exponentially buggy and hard to debug.
+#### Alternative design 2
+Make more than one list (for example 2), and we destributed threads into those lists by their priority (for example,threads with priority higher than 31 should go to list 1, otherwise list 0). Similarly, it takes less time to find a thread to run, but it takes up more memories, and we should modify a lot of code to implement that, causing the program exponentially buggy and hard to debug.
 
 
-  In our current design, it may be less efficient if there is too much thread in the kernel, which is unlikely happended in pintos. Since we have ready-to-work data structure, there would not be too much code to be written, just to calculate the priority and choose the next thread part will need some code. 
+ In our current design, it may be less efficient if there is too much thread in the kernel, which is unlikely happended in pintos. Since we have ready-to-work data structure, there would not be too much code to be written, just to calculate the priority and choose the next thread part will need some code. 
   Assume we have n threads in the kernel, the time complexity and space complexity will all be O(n), since we have only one list, and we survey through the ready list to fine the next thread.
   We have considered about extensibility, that is why we choose not to modify next_thread_to_run() directly, because we may want to change another policy for that, for this we can just modify 'fetch_thread()', and leave the other things unchanged.
 
