@@ -35,8 +35,8 @@ This design is an improvement upon the existing design since there is no busy wa
 
 ## Task 2: Priority Scheduler
 ### Data Structures and Functions
-#### 1. New Data Structures
-2 new data structures detailed below will be added: `queue` and `queue_element`.
+#### New Data Structures
+Two new data structures detailed below will be added: `queue` and `queue_element`.
 
 ```
 struct queue
@@ -58,7 +58,7 @@ struct queue_elem{
 ```
 The main data structure that will be implemented is a priority queue to store the various threads in the ready state with the thread with the highest priority available easily accessible. This priority queue will replace the doubly linked list described as `struct thread` in thread.c.  Within the `queue` struct, each `queue_elem` will have possibly null members: a left and right child, parent, priority, the threads original priority, a counter of internal donation, and a counter for whatever locks the thread might currently own.
 
-#### 2. New Functions
+#### New Functions
 
 Additionally, a few functions will be added to manage the priority queue and ensure that the thread with the highest priority is always at the root.
 ```
@@ -70,44 +70,39 @@ int queue_size(struct queue* queue); //Return the size a priority queue
 ```
 
 ### Algorithms
-#### 1. Selecting the next Thread to Run
-Currently the strategy pintos used  to chose a next thread to run is by calling a function `list_pop_front` which is just pop a element from a ready list.
+#### Selecting the next Thread to Run
+Currently, the strategy pintos used to chose the next thread to run is by calling a function `list_pop_front` which will pop an element from the ready list.
 
-However we change the **ready list** to the aforementioned **priority queue** to store the ready threads. And we change the function`list_pop_front` to `queue_pop` which will pop out an element with higgest priority if priority queue is not empty or return *NULL* if it is empty.
+However, this modification will change the ready list from a linked list to the aforementioned priority queue to store the threads in the ready state. The function `list_pop_front` will be changed to `queue_pop` which will pop out an element with the highest priority if the priority queue is not empty or return *NULL* if it is empty.
 
-#### 2. Acquiring and Releasing a Lock
-In fact, the implementations of `lock_acquire` ,`lock_try_acquire` and `lock_release` is just calling the functions `sema_down`,`sema_try_down`and`sema_up`.So we just to re-implement these three functions.
+#### Acquiring and Releasing a Lock
+The implementation of `lock_acquire`, `lock_try_acquire` and `lock_release` will just call the functions `sema_down`, `sema_try_down` and `sema_up`. 
 
-`sema_up` is pretty simple, basically it adds one to the value `semaphore.value` and if the value greater than zero it  calls a function `queue_pop` modified by ours to pop out a thread with highest priority and unblock it 
+`sema_up` adds one to the  `semaphore.value` integer and, if the value greater than zero, will call the modified function `queue_pop` which will pop out a thread with highest priority and unblock it. 
 
-So we foucs on `sema_down` and `sema_try_down`  in two different circumstances.
+`sema_down` and `sema_try_down` will be built to handle two different situations.
 
-- For a interrupt handler: if program want to acquire a lock,it should call the `sema_try_down` which  if `semaphore.value` equals 0 it returns false else it substract one from `semaphore.value` then returns ture.If the functions returns ture ,the interrupt handlers would konw it have already acquire a lock and execute next code or if it returns false, the handlers would abort because the interrupt handlers couldn't sleep and they couldn't be added into a waiting list.
+For an interrupt handler: if a program wants to acquire a lock, it will call the `sema_try_down` function.  If `semaphore.value` is 0, this function will return false and the interrupt handler will abort because an interrupt handler can't sleep or be added to a waiting list. Otherwise, it will decrement `semaphore.value` by 1 and return true. The interrupt handler would know it already acquired a lock and will execute the next line of code. 
 
-- For a normal thread:if a normal thread wants to acquire a lock,it should call the `sema_down` which first subtract one from  `semaphore.value` and if it equals 0 the current thead will be added to waiting priority queue and call `thread_block` to unblock itself and find next thread to run.
+If a normal thread wants to acquire a lock, it will call the `sema_down` function which decrements  `semaphore.value` by 1. If `semaphore.value` is 0 at this point, the current thread will be added to the waiting priority queue and call `thread_block` to unblock itself and find the next thread to run.
 
-#### 3. Computing the Effective Priority of a Thread
-The effctive priority consist of mainly two parts.
+#### Computing the Effective Priority of a Thread
+The effective priority of a thread is reliant on the original priority, set when the thread is created, and internal donation, modified when an originally low priority thread gets stuck waiting for a lock/semaphore for too long. Effective priority will follow the formula: `effetive priority = original priority + internal donation`
 
-- original priority which is set when thread created
-- internal donation: When a low original priority thread wait  lock/semaphore for too long, it increase to avoid starvation. The increasing strategy we exploited will be demostrated in the part 5.(Default value:0)
-
-effetive priority = original priority + internal donation
-
-#### 4. Priority Scheduling for Semaphores and Locks
+#### Priority Scheduling for Semaphores and Locks
 Just like I mentioned, the priority scheduling for locks depends on semaphores.So we just focus on the strategy of scheduling for semaphores and we just mentions how `sema_down`,`sema_try_down`and`sema_up` three funtions works in two different situations ,so we put our attention on the  increasing strategy of `internal donation`.
 
-When `sema_up` is called and if the waiting priority queue has some members, the thread with highest priority would be pop out.However threads with low priority have little chances to acquire locks/semaphores and starvation happens.To avoid this, every time after the `queue_pop` is called, the value of `internal donation` in **queue_element** of waiting priority queue *plus one*.
+When `sema_up` is called and if the waiting priority queue has some members, the thread with highest priority would be pop out. However threads with low priority have little chances to acquire locks/semaphores and starvation happens. To avoid this, every time after the `queue_pop` is called, the value of `internal donation` in **queue_element** of waiting priority queue *plus one*.
 
-#### 5. Priority Scheduling for Condition Variables
+#### Priority Scheduling for Condition Variables
 In pintos, condition variables combine semaphores and locks ,it maps one lock to multiple condition variables and it uses semaphores which are initialized to 0 to materialize a waiting list.
 Specifically, if one thread wants to wait for a condition variables it calls function `cond_wait` to block itself  put itself to waiting list and find next thread to run.
 And if a condtion variable is ready,current thread could calls functions `cond_signal` to unblock the thead in waiting list.
 
-#### 6. Changing a Thread's Priority
+#### Changing a Thread's Priority
 In changing the thread's priority, we modify `int priority` in the thread structure. In the case of a priority donation, whereas a lock is acquired by a low priority thread while a high priority thread is also on the `ready_list`. We should perform a priority donation. Get the both the high priority thread and low priority thread's priority level by calling `int thread_get_priority (void)` and save on `int temp_priority_high` and `int temp_priority_low` respectively then set the low priority to `temp_priority_high` by calling `void thread_set_priority (int temp_priority_high)` after the lock is released, change back its priority level using `void thread_set_priority (int temp_priority_low)`. However in some circumstances ,this may encounter some problems,like we could never recover our orginal priority in the condition of nested priority donation.So we add the `own_lock` and `original_priority` to recover the original priority of a thead when a thread release all locks.
 
-#### 7. Priority queue
+#### Priority queue
 The list structure that originially calls struct list from lib/kernel/list.c will be modified to become a priority queue that could be created from the doubly linked list structure that is implemented in lib/kernel/list.c.
 Time complexity of doubly-linked list is Θ(n) for access Θ(n) for search while we are using priority queue to pop the highest priority in each iteration, so it will have time complexity of Θ(1) for access if no speciic thread is called.
 
