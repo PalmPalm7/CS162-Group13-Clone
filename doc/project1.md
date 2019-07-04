@@ -227,4 +227,4 @@ For each second the recent_cpu is updated with the formular, which did not appea
 |36          |  20  |  12  |  4   |  58  |  58  |  58  | C |
 
 ### 3. Ambiguities
-Since there is no specific policy when dealing with threads with the same priority level, FCFS will be used to determine which thread goes first. All functions assume no timer tick is consumed during calculation.
+Since there is no specific policy when dealing with threads with the same priority level outlined in the spec, FCFS will be used to determine which thread goes first. All functions assume no timer tick is consumed during calculation.
