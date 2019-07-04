@@ -85,7 +85,7 @@ If an interrupt handler wants to interact with semaphores, it will call the `sem
 If a normal thread wants to acquire a lock, it will call the `sema_down` function which decrements  `semaphore.value` by 1. If `semaphore.value` is 0 at this point, the current thread will be added to the waiting priority queue and call `thread_block` to unblock itself and find the next thread to run.
 
 #### Computing the Effective Priority of a Thread
-The effective priority of a thread is reliant on the original priority, set when the thread is created, and internal donation, modified when an originally low priority thread gets stuck waiting for a lock/semaphore for too long. Effective priority will follow the formula: `effetive priority = priority + internal donation`
+The effective priority of a thread is reliant on the original priority, set when the thread is created, and internal donation, modified when an originally low priority thread gets stuck waiting for a lock/semaphore for too long. Effective priority will follow the formula: `effective priority = original priority + internal donation`
 
 #### Priority Scheduling for Semaphores and Locks
 The priority scheduling for locks depends on interactions with semaphores. The previously described strategy of scheduling for semaphores as well as the `sema_down`,`sema_try_down`and`sema_up` funtions will handle most cases. However, internal donation will be handled as follows. As it stands, `sema_up` will be called and if the waiting priority queue has a nonzero amount of members, the thread with highest priority will be popped out. Alternatively, threads with lower priorities have few chances to acquire locks/semaphores and starvation may occur. In order to avoid this, every time after `queue_pop` is called, the value of `internal donation` in the thread's `queue_element` will increment by 1.
@@ -125,12 +125,12 @@ A priority queue was chosen to store the threads due to the ease of creation and
 
 ### Data Structures and Functions
 ```
-struct thread // add recent_cpu for priority calculation
-static struct thread * next_thread_to_run(void); //involk fetch_thread() and enable mlfqs
+struct thread //Add recent_cpu for priority calculation
+static struct thread * next_thread_to_run(void); //Invoke fetch_thread() and enable mlfqs
 static struct thread * running_thread(); //change ready list and enable mlfqs
-void thread_unblock(struct thread *t) //add it into thread_lists
-void thread_block(struct thread *t) // add it into blocked_list
-static struct thread * fetch_thread()// the next_thread_to_run should call that, scan through the thread list , then fetch the correct one
+void thread_unblock(struct thread *t) //Add thread into thread_lists
+void thread_block(struct thread *t) //Add thread into blocked_list
+static struct thread * fetch_thread()//Fetches the next_thread_to_run should call that, scan through the thread list , then fetch the correct one
 static void init_thread(struct thread*t, chonst char *name, int priority); set the priority 
 void thread_schedule_tail(struct thread *prev);// reset the priority then sent back to the thread_lists
 int thread_get_nice(void)  // get the thead`s nice value
