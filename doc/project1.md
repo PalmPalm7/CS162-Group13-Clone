@@ -141,7 +141,7 @@ int load_avg(); //Hold the load average for calculation
 
 ```
 
-The thread struct will have the new member recent_cpu in order to calculate the priority of the thread.  All functions that rely on the structure of the thread ready list will be modified to accomodate the flag to switch to using the MLFQS. Aditionally, the nice values of threads must now be implemented in order to help determine how willing the threads are to give up their priority.  New functions will also need to be created that calculate and keep track of the load average to ensure fairness among the threads.
+The thread struct will have the new member recent_cpu in order to calculate the priority of the thread.  All functions that rely on the structure of the thread ready list will be slightly modified to accomodate the flag to switch to using the MLFQS. Aditionally, the nice values of threads must now be implemented in order to help determine how willing the threads are to give up their priority.  New functions will also need to be created that calculate and keep track of the load average to ensure fairness among the threads.
 
 ### Algorithms
 
@@ -170,15 +170,12 @@ When the kernel calls the scheduler, interrupts are turned off so there is no ne
 ### Rationale
 
 #### Alternative design 1: 
-Create 64 lists ,each response for 1 priority, when scheduling happened, we just moved the thread in the lists that fits its priority.
-This design is useful for the situation that we need to handle many threads (typically more than 64), while we would not counter so many threads in pintos, so many of the lists may be empty in most of the time. plus, if we choose this kind, we should modify all the functions related with ready_list, thus this is not the choice. 
+Create 64 lists, each responsible for 1 priority, when scheduling happens, the thread will be moved into the list that fits its priority. This design is useful for the given situation that many threads need to be handled (typically more than 64). However, since it is rare for there to be that many ready threads in Pintos, many of the lists may be empty in most of the time. Additionally, if this design is chosen, all the functions related with ready_list will need to be heavily modified, thus this is not the choice. 
+
 #### Alternative design 2
-Make more than one list (for example 2), and we destributed threads into those lists by their priority (for example,threads with priority higher than 31 should go to list 1, otherwise list 0). Similarly, it takes less time to find a thread to run, but it takes up more memories, and we should modify a lot of code to implement that, causing the program exponentially buggy and hard to debug.
+Make more than one list (for example 2), and destribute threads into those lists by their priority. For example, threads with priority higher than 31 should go to list 1, while the rest should go to list 0. Similarly, it takes less time to find a thread to run, but it takes up more memory, and a lot of code will need to be greatly altered to implement that, creating an unnecessarily complex program.
 
-
- In our current design, it may be less efficient if there is too much thread in the kernel, which is unlikely happended in pintos. Since we have ready-to-work data structure, there would not be too much code to be written, just to calculate the priority and choose the next thread part will need some code. 
-  Assume we have n threads in the kernel, the time complexity and space complexity will all be O(n), since we have only one list, and we survey through the ready list to fine the next thread.
-  We have considered about extensibility, that is why we choose not to modify next_thread_to_run() directly, because we may want to change another policy for that, for this we can just modify 'fetch_thread()', and leave the other things unchanged.
+With the proposed design, it may be less efficient if there are too many threads in the kernel, but this situation is unlikely to occur in pintos. Since ready-to-work data structures are available, the existing structure of Pintos will remain mostly intact. Assume we have n threads in the kernel, the time complexity and space complexity will all be O(n), since we have only one list, and we survey through the ready list to find the next thread. We chose not to modify `next_thread_to_run()` directly, and instead modify `fetch_thread()`.
 
 ## Additional Questions
 
