@@ -5,8 +5,8 @@ Design Document for Project 1: Threads
 
 * Zuxin Li <lizx2019@berkeley.edu>
 * Joshua Alexander <josh.alexander1315@berkeley.edu>
-* Wenzheng Guo <guowz19@berkeley.edu>
-* Handi Xie <hxie13@berkeley.edu>
+* FirstName LastName <email@domain.example>
+* FirstName LastName <email@domain.example>
 
 ## Task 1: Efficient Alarm Clock
 ### Data Structures and Functions
@@ -36,38 +36,38 @@ This design is an improvement upon the existing design since there is no busy wa
 ## Task 2: Priority Scheduler
 ### Data Structures and Functions
 #### 1. New Data Structures
-Add data structure  `queue` and `queue_element`.
+2 new data structures detailed below will be added: `queue` and `queue_element`.
 
+```
+struct queue
+{
+    struct queue_elem root; //The head of the queue
+    int count; //Number of threads in the queue
+};
+```
 ```
 struct queue_elem{
     struct queue_elem* left_child;
     struct queue_elem* right_child;
     struct queue_elem* parent;
     int priority;
-    int original_priority;//it is same with priority before any priority donation
-    int internal_donation;//This member is added to avoid starvation. 
-    When a thread is blocked or waiting for some resources for too long,it increases.
-    int own_lock;//record current thread own how many locks if it's 0 priority should set to original priority
+    int original_priority; //Stores the base priority of the thread prior to any donation.
+    int internal_donation; //Ensures that no threads suffer from starvation. When a thread is blocked or waiting for a resource past a certain limit, it will increase and therefore modify the effective priority of the thread in question.
+    int own_lock; //Records if a thread currently owns any locks.  If it is set to 0, the thread's priority should not be affected by any locks.
 };
 ```
-```
-struct queue
-{
-    struct queue_elem root;//The head of queue
-    int count; //count on number of threads in the queue
-};
-```
-Using this priority queue(maxheap indeed) replace the list in `struct thread`.
+The main data structure that will be implemented is a priority queue to store the various threads in the ready state with the thread with the highest priority available easily accessible and will replace the doubly linked list described as `struct thread` in thread.c.  Within the `queue` struct, each `queue_elem` will have possibly null members: a left and right child, parent, priority, the threads original priority, a counter of internal donation, and a counter for whatever locks the thread might currently own.
 
 #### 2. New Functions
-```
-#define queue_entry(QUEUE_ELEM, STRUCT, MEMBER)//it is a MACRO to mimic the list_entry,which is returning thread pointer from a queue_elem
-struct queue_elem *queue_root (struct queue* queue);//return first element of a priority queue
-struct queue_elem *queue_pop (struct queue* queue);//pop out the first element of a priority queue
-struct queue_elem *queue_insert(struct queue* queue);//insert the element into the queue and reorder this priority queue to maintain the property of a heap
-int queue_size(struct queue* queue);//return the size a priority queue
-```
 
+Additionally, a few functions will be added to manage the priority queue and ensure that the thread with the highest priority is always at the root.
+```
+#define queue_entry(QUEUE_ELEM, STRUCT, MEMBER) //A macro to mimic list_entry, which is returning a thread pointer from a queue_elem
+struct queue_elem *queue_root (struct queue* queue); //Return first element of a priority queue
+struct queue_elem *queue_pop (struct queue* queue); //Pop out the first element of a priority queue
+struct queue_elem *queue_insert (struct queue* queue); //Insert the element into the queue and reorder the priority queue to maintain the property of a max heap
+int queue_size(struct queue* queue); //Return the size a priority queue
+```
 
 ### Algorithms
 #### 1. Selecting the next Thread to Run
@@ -108,7 +108,7 @@ And if a condtion variable is ready,current thread could calls functions `cond_s
 In changing the thread's priority, we modify `int priority` in the thread structure. In the case of a priority donation, whereas a lock is acquired by a low priority thread while a high priority thread is also on the `ready_list`. We should perform a priority donation. Get the both the high priority thread and low priority thread's priority level by calling `int thread_get_priority (void)` and save on `int temp_priority_high` and `int temp_priority_low` respectively then set the low priority to `temp_priority_high` by calling `void thread_set_priority (int temp_priority_high)` after the lock is released, change back its priority level using `void thread_set_priority (int temp_priority_low)`. However in some circumstances ,this may encounter some problems,like we could never recover our orginal priority in the condition of nested priority donation.So we add the `own_lock` and `original_priority` to recover the original priority of a thead when a thread release all locks.
 
 #### 7. Priority queue
-Modify the list structure that originially calls struct list from lib/kernel/list.c to a priority queue that could be created from the doubly linked list structure that is implemented in lib/kernel/list.c.
+The list structure that originially calls struct list from lib/kernel/list.c will be modified to become a priority queue that could be created from the doubly linked list structure that is implemented in lib/kernel/list.c.
 Time complexity of doubly-linked list is Θ(n) for access Θ(n) for search while we are using priority queue to pop the highest priority in each iteration, so it will have time complexity of Θ(1) for access if no speciic thread is called.
 
 
@@ -136,7 +136,7 @@ A page of thread will be deallocated only when function `thread_schedule_tail` i
 
 ### Rationale
 Data structure modification, reasons are described in `8.priority queue`
-As for coding, we would not need much coding from swapping from doubly linked list to a priority queue because it is one of the basic tasks we have learned in data structure.
+As for coding, we would not need much coding from swapping from a doubly linked list to a priority queue because it is one of the basic tasks we have learned in data structure.
 As for time complexity, it is explained in `8.priority queue`.
 As for space complexity, doubly linked list and queue both have worst case of O(n).
 We did not modify much since we were basically using the same structure but in a different way.
@@ -243,7 +243,3 @@ Assume 20ms for a tick
 |28          |  20  |  8   |  0   |  58  |  59  |  59  | B |
 |32          |  20  |  12  |  0   |  58  |  58  |  59  | C |
 |36          |  20  |  12  |  4   |  58  |  58  |  58  | A |
-
-### 3. Ambiguities
-- Since there is no specific policy when dealing with threads with the same priority level, we use FCFS to calculate.
-- We assume no timer tick is consumed during calculation.
