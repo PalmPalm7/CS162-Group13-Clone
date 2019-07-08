@@ -91,6 +91,12 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+   
+    /* nice value of the thread*/
+    int nice_value;
+    
+    /*recent cpu for the thread, the struct should store 100 times real value*/
+    int recent_cpu;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
