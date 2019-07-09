@@ -344,6 +344,50 @@ thread_set_priority (int new_priority)
   thread_yield();
 }
 
+
+
+/* In this function we need to implement 3 checks
+    1.if new_priority bigger than t->priority set t->priority as new_priority
+    2.when function returns check if thread_priority_donation_tem bigger than t->priority 
+      if so t->priority = thread_priority_donation_tem else do noting
+    3.check if t->own_lock == 0 if so restore the priority to orginal_priority
+  */
+
+void 
+thread_priority_donation (struct thread *t,int new_priority)
+{
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  int thread_priority_donation_temp = t->priority;
+  if (new_priority > t->priority)
+  {
+    t->priority = new_priority;
+  }
+
+  intr_set_level (old_level);
+
+  thread_yield ();
+
+  old_level = intr_disable ();
+
+  if (thread_priority_donation_temp > t->priority)
+    t->priority =thread_priority_donation_temp;
+
+  if (!t->lock_own)
+    t->priority = t->orginal_priority;
+
+  intr_set_level (old_level);
+  
+  thread_yield ();
+}
+
+void priority_donation_check()
+{
+
+}
+
+
+
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void)
