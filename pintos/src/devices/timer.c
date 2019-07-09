@@ -89,10 +89,14 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
+  ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
   int64_t start = timer_ticks ();
+  
+  struct thread *t = thread_current();
+  t->wake_time = start + ticks;                 /* Set the time that the thread must awaken at. */
+  
 
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks)
+   while (timer_elapsed (start) < ticks)
     thread_yield ();
 }
 
