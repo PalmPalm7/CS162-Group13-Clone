@@ -1,11 +1,28 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
+
+
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
 #include "threads/fixed-point.h"
+#include "threads/synch.h"
+
+struct prioriy_donation_unit
+  {
+    struct semahpore *sema;
+    int priority_donation;
+  };
+
+struct priority_donation
+  {
+    struct prioriy_donation_unit priority_donation_slots[10];
+    int count;
+  };
+
+
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -105,6 +122,11 @@ struct thread
     int orginal_priority;
     
     int lock_own;
+
+    struct priority_donation donation;
+
+
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -145,6 +167,7 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 void thread_priority_donation (struct thread *t,int new_priority);
+void pop_out_max_priority_thread(struct list *thread_list,struct thread *max);
 
 int thread_get_nice (void);
 void thread_set_nice (int);

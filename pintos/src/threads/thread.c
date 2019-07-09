@@ -382,9 +382,9 @@ thread_priority_donation (struct thread *t,int new_priority)
   thread_yield ();
 }
 
-void priority_donation_check()
+void priority_donation_check(struct list *wait)
 {
-
+  
 }
 
 
@@ -587,6 +587,32 @@ next_thread_to_run (void)
   }
   return max;
 }
+
+
+void pop_out_max_priority_thread(struct list *thread_list,struct thread *max)
+{
+  ASSERT(!list_empty(thread_list));
+  struct list_elem *e;
+  struct list_elem *r;
+  struct thread *t;
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  max = list_entry (list_begin (thread_list), struct thread, elem);
+  r = list_begin (thread_list);
+  for(e = list_begin (thread_list);e != list_end (thread_list);
+      e = list_next (e))
+    {
+      t = list_entry (e, struct thread, elem);
+      if (t->priority > max->priority)
+      {
+        max = t;
+        r = e;
+      }
+    }
+  list_remove(r);
+  intr_set_level (old_level);
+}
+
 
 
 /* Completes a thread switch by activating the new thread's page

@@ -68,6 +68,11 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0)
     {
+      /*
+        here we do following things
+        1. update all the sema->waiters' priority  
+        2. change the own_lock 
+      */
       list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
     }
@@ -114,6 +119,16 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters))
+  /* 
+    here we do following things
+    1.get the thread with highest priority
+    2.restore the priority
+    3.change the unlock and check if the priority of thread should restore to original
+    
+  
+  */
+
+
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
   sema->value++;
