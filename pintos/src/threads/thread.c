@@ -491,14 +491,47 @@ alloc_frame (struct thread *t, size_t size)
    empty.  (If the running thread can continue running, then it
    will be in the run queue.)  If the run queue is empty, return
    idle_thread. */
+// static struct thread *
+// next_thread_to_run (void)
+// {
+//   if (list_empty (&ready_list))
+//     return idle_thread;
+//   else
+//     return list_entry (list_pop_front (&ready_list), struct thread, elem);
+// }
+
 static struct thread *
 next_thread_to_run (void)
 {
+  struct list_elem *e;
+  struct list_elem *r;
+  struct thread *max;
+  struct thread *t;
+  enum intr_level old_level;
+
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  {
+    old_level = intr_disable ();
+    max = list_entry (list_begin (&ready_list), struct thread, elem);
+    r = list_begin(&ready_list);
+    for(e = list_begin (&ready_list);e != list_end (&ready_list);
+        e = list_next (e))
+      {
+        t = list_entry (e, struct thread, elem);
+        if (t->priority > max->priority)
+        {
+          max = t;
+          r = e;
+        }
+      }
+    list_remove(r);
+    intr_set_level (old_level);
+  }
+  return max;
 }
+
 
 /* Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.
