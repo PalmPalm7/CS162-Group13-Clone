@@ -527,7 +527,7 @@ list_min (struct list *list, list_less_func *less, void *aux)
 static bool
 wake_time_comp (const struct list_elem *a,
                 const struct list_elem *b,
-                void *aux) 
+                void *aux UNUSED) 
 {
    struct thread *thread_1 = list_entry (a, struct thread, elem);
    struct thread *thread_2 = list_entry (b, struct thread, elem);
