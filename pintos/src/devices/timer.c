@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "lib/kernel/list.c"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -96,7 +97,7 @@ timer_sleep (int64_t ticks)
   t->wake_time = start + ticks;                 /* Set the time that the thread must awaken at. */
 //   t->status = THREAD_BLOCKED;                /* Set the thread to be blocked as an extra precaution */
 //    list_insert_ordered (&sleep_list, &t->wake_time, 
-//                         NEED FUNCTION HERE, NULL);    /* Add thread to ordered sleep_list */
+//                         wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
 
    while (timer_elapsed (start) < ticks)
     thread_yield ();
