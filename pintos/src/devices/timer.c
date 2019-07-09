@@ -94,7 +94,8 @@ timer_sleep (int64_t ticks)
   
   struct thread *t = thread_current();
   t->wake_time = start + ticks;                 /* Set the time that the thread must awaken at. */
-  
+   
+//   t->status = THREAD_BLOCKED;
 
    while (timer_elapsed (start) < ticks)
     thread_yield ();
