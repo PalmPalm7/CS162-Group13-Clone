@@ -522,7 +522,7 @@ next_thread_to_run (void)
   {
     old_level = intr_disable ();
     max = list_entry (list_begin (&ready_list), struct thread, elem);
-    r = list_begin(&ready_list);
+    r = list_begin (&ready_list);
     for(e = list_begin (&ready_list);e != list_end (&ready_list);
         e = list_next (e))
       {
