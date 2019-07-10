@@ -45,6 +45,8 @@ static struct thread *initial_thread;
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
 
+
+static struct list_elem* one_elem;
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame
   {
@@ -395,11 +397,25 @@ void thread_sema_foreach(thread_action_func *func,void *aux)
 {
   struct list_elem *e;
   ASSERT (intr_get_level () == INTR_OFF);
-  if(list_empty(&lock_list))
-  printf("check\n");
+  intr_disable();
+  printf("ADDED:%p\n",one_elem);
+  printf("HEAD ADDRESS:%p\n",list_head (&lock_list));
+  printf("FIRST ELEMENT:%p\n",list_begin (&lock_list));
+  printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+  list_begin (&lock_list)->next = list_end (&lock_list);
+  printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+  printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+  printf("FIRST ELEMENT's PREV:%p\n",list_begin (&lock_list)->prev);
+  printf("TAIL ADDRESS:%p\n",list_end (&lock_list));
+  printf("TAIL ADDRESS's previous:%p\n",list_end (&lock_list)->prev);
+  printf("%p\n",list_end (&lock_list)->next);
+  //e = list_begin (&lock_list);
+  printf("FINAL CHECK:%p\n",list_begin (&lock_list)->next);
+
   for (e = list_begin (&lock_list); e != list_end (&lock_list);
        e = list_next (e))
     {
+      printf("%p\n",e);
       printf("loop\n");
       struct thread *t = list_entry (e, struct thread, allelem);
       func (t, aux);
@@ -409,7 +425,8 @@ void thread_sema_foreach(thread_action_func *func,void *aux)
 
 void thread_lock_list_add(struct list_elem *elem)
 {
-  list_push_front(&lock_list,elem);
+  one_elem = elem;
+  list_push_back(&lock_list,elem);
 }
 
 
@@ -831,12 +848,6 @@ allocate_tid (void)
   return tid;
 }
 
-struct list*
-return_lock_list(void)
-{
-
-  return &lock_list;
-}
 
 
 /* Offset of `stack' member within `struct thread'.

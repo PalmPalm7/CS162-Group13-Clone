@@ -121,7 +121,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     
-    struct list_elem sema_elem;          /* Added to track sema_elem */
+    struct list_elem sema_elem;          /* Added to track semaphore */
     
     int orginal_priority;
     

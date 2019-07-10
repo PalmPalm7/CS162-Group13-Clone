@@ -90,25 +90,15 @@ sema_down (struct semaphore *sema)
   while (sema->value == 0)
     {
 
-      // this is sth i can't understand,it takes me so long time to spot this bug area.
-      // for(e = list_begin (lock_list); e != list_end (lock_list);
-      //     e = list_next (e))
-      // {
-      //   printf("%p",e);
-      //   printf("loop\n");
-      //   struct thread *t = list_entry (e, struct thread, sema_elem);
-      //   int ret_val = priority_donation_check_and_set(t,sema,thread_current()->priority);
-      // }
 
       thread_sema_foreach(thread_action_check_and_set,sema);
       list_push_front (&sema->waiters, &thread_current ()->elem);
-      printf("changes\n");
       thread_block (); 
     }
   sema->value--;
 
   //list_push_front(lock_list,&thread_current()->sema_elem);
-  thread_lock_list_add(&thread_current()->sema_elem);
+  thread_lock_list_add(&(thread_current()->sema_elem));
   thread_current ()->lock_own++;
   thread_current ()->donation.priority_donation_slots \
   [thread_current ()->donation.count].sema = sema;
