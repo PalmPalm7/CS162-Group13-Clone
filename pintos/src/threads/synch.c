@@ -135,10 +135,24 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
+      /*
+        here we do following things
+        1. update all the sema->waiters' priority  
+        (the slot of priority and changes the effective 
+        priority after modfiy the slot) and change the count of slot.
+        2. change the own_lock(++)
+
+      */
       list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
     }
   sema->value--;
+  /* Set the slot of thread owns the sema
+    1.set thread->slot[count++].sema = current_sema
+    2.set priority of previous thread to current thread
+  
+  */
+
   intr_set_level (old_level);
 }
 
@@ -180,8 +194,7 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters))
-  {
+  if (!list_empty (&sema->waiters)){
     struct thread *t;
     priority_donation_release(thread_current(),sema);
     
@@ -192,21 +205,6 @@ sema_up (struct semaphore *sema)
   sema->value++;
   intr_set_level (old_level);
 }
-
-// void
-// sema_up (struct semaphore *sema) 
-// {
-//   enum intr_level old_level;
-
-//   ASSERT (sema != NULL);
-
-//   old_level = intr_disable ();
-//   if (!list_empty (&sema->waiters)) 
-//     thread_unblock (list_entry (list_pop_front (&sema->waiters),
-//                                 struct thread, elem));
-//   sema->value++;
-//   intr_set_level (old_level);
-// }
 
 static void sema_test_helper (void *sema_);
 

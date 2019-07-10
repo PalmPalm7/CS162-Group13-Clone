@@ -3,6 +3,8 @@
 #define MAX_DONATION_NUM 10
 
 
+
+
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
