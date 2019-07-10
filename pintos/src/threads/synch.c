@@ -32,6 +32,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -41,11 +42,19 @@
 
    - up or "V": increment the value (and wake up one waiting
      thread, if any). */
+
+
+
+struct list *lock_list;
+
+
+static int lock_list_flag = 0;
+
+/* Modified to check whether lock_list is initialized*/
 void
 sema_init (struct semaphore *sema, unsigned value)
 {
   ASSERT (sema != NULL);
-
   sema->value = value;
   list_init (&sema->waiters);
 }
@@ -57,8 +66,66 @@ sema_init (struct semaphore *sema, unsigned value)
    interrupt handler.  This function may be called with
    interrupts disabled, but if it sleeps then the next scheduled
    thread will probably turn interrupts back on. */
+
+
+
+void thread_action_check_and_set(struct thread *t,void *aux){
+  struct semaphore* sema = (struct semaphore*) aux; 
+  priority_donation_check_and_set(t,sema,thread_current()->priority);
+}
+
+
+// void
+// sema_down (struct semaphore *sema)
+// {
+//   enum intr_level old_level;
+
+//   ASSERT (sema != NULL);
+//   ASSERT (!intr_context ());
+
+//   old_level = intr_disable ();
+
+
+//   struct list_elem *e;
+//   if (!lock_list_flag)
+//   {
+//     lock_list = return_lock_list();
+//     lock_list_flag = 1;
+//   }
+
+// //find who owns this lock by search the lock_list which all the element owns a lock will in this list
+//   while (sema->value == 0)
+//     {
+
+//       // this is sth i can't understand,it takes me so long time to spot this bug area.
+//       // for(e = list_begin (lock_list); e != list_end (lock_list);
+//       //     e = list_next (e))
+//       // {
+//       //   printf("%p",e);
+//       //   printf("loop\n");
+//       //   struct thread *t = list_entry (e, struct thread, sema_elem);
+//       //   int ret_val = priority_donation_check_and_set(t,sema,thread_current()->priority);
+//       // }
+
+//       thread_sema_foreach(thread_action_check_and_set,sema);
+//       list_push_front (&sema->waiters, &thread_current ()->elem);
+//       thread_block (); 
+//     }
+//   sema->value--;
+
+//   list_push_front(lock_list,&thread_current()->sema_elem);
+//   thread_current ()->lock_own++;
+//   thread_current ()->donation.priority_donation_slots \
+//   [thread_current ()->donation.count].sema = sema;
+//   thread_current ()->donation.priority_donation_slots \
+//   [thread_current ()->donation.count++].priority_donation = thread_current()->priority;
+//   intr_set_level (old_level);
+// }
+
+
+
 void
-sema_down (struct semaphore *sema)
+sema_down (struct semaphore *sema) 
 {
   enum intr_level old_level;
 
@@ -66,7 +133,7 @@ sema_down (struct semaphore *sema)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  while (sema->value == 0)
+  while (sema->value == 0) 
     {
       list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
@@ -109,16 +176,37 @@ void
 sema_up (struct semaphore *sema)
 {
   enum intr_level old_level;
-
+  struct thread *e;
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters))
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+  {
+    struct thread *t;
+    priority_donation_release(thread_current(),sema);
+    
+    t = list_entry (pop_out_max_priority_thread 
+    (&sema->waiters), struct thread, elem);
+    thread_unblock (t);
+  }
   sema->value++;
   intr_set_level (old_level);
 }
+
+// void
+// sema_up (struct semaphore *sema) 
+// {
+//   enum intr_level old_level;
+
+//   ASSERT (sema != NULL);
+
+//   old_level = intr_disable ();
+//   if (!list_empty (&sema->waiters)) 
+//     thread_unblock (list_entry (list_pop_front (&sema->waiters),
+//                                 struct thread, elem));
+//   sema->value++;
+//   intr_set_level (old_level);
+// }
 
 static void sema_test_helper (void *sema_);
 

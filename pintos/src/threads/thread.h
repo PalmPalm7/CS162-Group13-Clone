@@ -1,11 +1,28 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
+#define MAX_DONATION_NUM 10
+
 
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
 #include "threads/fixed-point.h"
+#include "threads/synch.h"
+
+struct prioriy_donation_unit
+  {
+    struct semahpore *sema;
+    int priority_donation;
+  };
+
+struct priority_donation
+  {
+    struct prioriy_donation_unit priority_donation_slots[MAX_DONATION_NUM];
+    int count;
+  };
+
+
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -102,9 +119,16 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     
+    struct list_elem sema_elem;          /* Added to track sema_elem */
+    
     int orginal_priority;
     
     int lock_own;
+
+    struct priority_donation donation;
+
+
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -144,11 +168,19 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-void thread_priority_donation (struct thread *t,int new_priority);
+struct list_elem * pop_out_max_priority_thread(struct list *thread_list);
+int priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority);
+void priority_donation_selfcheck(struct thread *t);
+void priority_donation_release(struct thread *t,struct semaphore *sema);
+
+
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+struct list* return_lock_list(void);
+void thread_sema_foreach(thread_action_func *func,void *aux);
+
 
 #endif /* threads/thread.h */

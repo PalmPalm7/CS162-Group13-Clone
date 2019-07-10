@@ -27,6 +27,11 @@ static struct list ready_list;
 /* List of processes in a sleeping state from timer_sleep(). */
 static struct list sleep_list;
 
+
+/* List of process that currently own a lock */
+static struct list lock_list;
+
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -87,15 +92,22 @@ static tid_t allocate_tid (void);
 
    It is not safe to call thread_current() until this function
    finishes. */
+
+   /* Modified to initialize lock_list*/
 void
 thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
+  list_init (&lock_list);
+  list_empty (&lock_list);
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&sleep_list);
+  
+
+
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -120,6 +132,7 @@ thread_start (void)
 
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
+
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -202,9 +215,24 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
+  
 
+  /* Initiate the member variables for priority donation */
+  t->lock_own = 0;
+  t->orginal_priority = t->priority;
+  t->donation.count = 0;
+  int i;
+  for(i = 0; i < MAX_DONATION_NUM; i++)
+  {
+    t->donation.priority_donation_slots[i].priority_donation = -1;
+    t->donation.priority_donation_slots[i].sema = NULL;
+  }
+  
   /* Add to run queue. */
   thread_unblock (t);
+
+  /* If the thread create a thread with bigger priority yield the CPU */
+  /* Newly added*/
   if(thread_current()->priority < t->priority)
     thread_yield();
   return tid;
@@ -337,6 +365,26 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+void thread_sema_foreach(thread_action_func *func,void *aux)
+{
+  struct list_elem *e;
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  for (e = list_begin (&lock_list); e != list_end (&lock_list);
+       e = list_next (e))
+    {
+      printf("loop\n");
+      struct thread *t = list_entry (e, struct thread, allelem);
+      func (t, aux);
+    }
+}
+
+
+
+
+
+
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority)
@@ -354,38 +402,77 @@ thread_set_priority (int new_priority)
     3.check if t->own_lock == 0 if so restore the priority to orginal_priority
   */
 
-void 
-thread_priority_donation (struct thread *t,int new_priority)
+
+
+
+/* check thread t's priority donation slots find if any 
+    slot's sema got the semaphore if it find one set it to current priority and
+    return non -1  */
+int 
+priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority)
 {
-  enum intr_level old_level;
-  old_level = intr_disable ();
-  int thread_priority_donation_temp = t->priority;
-  if (new_priority > t->priority)
+  int i=0;
+  for (i = 0; i < t->donation.count; i++)
   {
-    t->priority = new_priority;
+    if (t->donation.priority_donation_slots[i].sema == sema)
+    {
+      if (t->donation.priority_donation_slots[i].priority_donation < current_priority)
+      {
+        t->donation.priority_donation_slots[i].priority_donation = current_priority;
+        priority_donation_selfcheck (t);
+      }
+      return t->donation.priority_donation_slots[i].priority_donation;
+    }
+    return -1;
+  }
+}
+/* maintain the property of priority donation slot which is if own_lock is not zero
+  the priority always equal the biggest one in priority_donation_slot .  */
+
+void 
+priority_donation_selfcheck (struct thread *t)
+{
+  int max = 0;
+  int max_index = 0;
+  int j,i;
+  for(j = t->donation.count; j < MAX_DONATION_NUM; j++)
+  {
+    t->donation.priority_donation_slots[j].priority_donation = -1;
+    t->donation.priority_donation_slots[j].sema = NULL;
   }
 
-  intr_set_level (old_level);
 
-  thread_yield ();
-
-  old_level = intr_disable ();
-
-  if (thread_priority_donation_temp > t->priority)
-    t->priority =thread_priority_donation_temp;
-
-  if (!t->lock_own)
-    t->priority = t->orginal_priority;
-
-  intr_set_level (old_level);
-  
-  thread_yield ();
+  for(i = 0; i < t->donation.count; i++)
+  {
+    if (t->donation.priority_donation_slots[i].priority_donation > max)
+    {
+      max = t->donation.priority_donation_slots[i].priority_donation;
+      max_index = i;
+    }
+  }
+  t->priority = max;
+  //printf("%d\n",max);
 }
 
-void priority_donation_check()
+/* */
+void priority_donation_release(struct thread *t,struct semaphore *sema)
 {
-
+  int i,j;
+  for (i = 0; i < t->donation.count; i++)
+  {
+      if(t->donation.priority_donation_slots[i].sema == sema){
+        for(j = i; j < t->donation.count - 1; j++)
+        {
+          t->donation.priority_donation_slots[j].priority_donation = t->donation.priority_donation_slots[j+1].priority_donation;
+          t->donation.priority_donation_slots[j].sema = t->donation.priority_donation_slots[j+1].sema;
+        }
+        t->donation.count--;
+        
+      }
+  }
+  priority_donation_selfcheck(t);
 }
+
 
 
 
@@ -589,6 +676,35 @@ next_thread_to_run (void)
 }
 
 
+struct list_elem *
+pop_out_max_priority_thread(struct list *thread_list)
+{
+  ASSERT(!list_empty(thread_list));
+  struct list_elem *e;
+  struct list_elem *r;
+  struct thread *t;
+  struct thread *max;
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  max = list_entry (list_begin (thread_list), struct thread, elem);
+  r = list_begin (thread_list);
+  for(e = list_begin (thread_list);e != list_end (thread_list);
+      e = list_next (e))
+    {
+      t = list_entry (e, struct thread, elem);
+      if (t->priority > max->priority)
+      {
+        max = t;
+        r = e;
+      }
+    }
+  list_remove(r);
+  intr_set_level (old_level);
+  return r;
+}
+
+
+
 /* Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.
 
@@ -671,6 +787,14 @@ allocate_tid (void)
 
   return tid;
 }
+
+struct list*
+return_lock_list(void)
+{
+
+  return &lock_list;
+}
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
