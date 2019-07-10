@@ -100,11 +100,6 @@ thread_init (void)
   list_init (&all_list);
   list_init (&sleep_list);
 
-  /*initialize load average*/
-  if(thread_mlfqs){
-    load_avg = 0;
-    mlfqs_ticks = timer_ticks();
-  }
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -112,6 +107,12 @@ thread_init (void)
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
  
+  /*initialize load average*/
+  if(thread_mlfqs){
+    load_avg = 0;
+    mlfqs_ticks = timer_ticks();
+  }
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -123,7 +124,8 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
-
+  
+  load_avg = 0;
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -152,14 +154,14 @@ thread_tick (void)
  /* for mlfqs*/ 
     t->recent_cpu += 100;
     /*calculate each second*/
-    if(timer_ticks() % (int64_t)100 == 0&& timer_ticks () >1000){
+    if(timer_ticks() % (int64_t)100 == 0){
       fixed_point_t former_load_avg = fix_int(load_avg); /*get former load average*/
       former_load_avg = fix_unscale(former_load_avg, 100); /* divide by 100 */
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
                                            fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
-      load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
-      //load_avg = timer_ticks();
+      //load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
+      load_avg = kernel_ticks;
     }
   }
 
@@ -442,6 +444,16 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void)
 {
+//  if(timer_ticks() % (int64_t)100 == 0){
+//    fixed_point_t former_load_avg = fix_int(load_avg); /*get former load average*/
+//    former_load_avg = fix_unscale(former_load_avg, 100); /* divide by 100 */
+//    fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
+//                                         fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
+//    new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
+//    load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
+//   // load_avg = kernel_ticks;
+//  }
+//
   return load_avg;
 }
 
