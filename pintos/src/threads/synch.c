@@ -102,6 +102,7 @@ sema_down (struct semaphore *sema)
 
       thread_sema_foreach(thread_action_check_and_set,sema);
       list_push_front (&sema->waiters, &thread_current ()->elem);
+      printf("changes\n");
       thread_block (); 
     }
   sema->value--;
