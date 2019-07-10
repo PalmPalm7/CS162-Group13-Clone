@@ -174,8 +174,8 @@ struct list_elem * pop_out_max_priority_thread(struct list *thread_list);
 int priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority);
 void priority_donation_selfcheck(struct thread *t);
 void priority_donation_release(struct thread *t,struct semaphore *sema);
-
-
+int thread_lock_list_empty(void);
+void thread_lock_list_add(struct list_elem *elem);
 
 int thread_get_nice (void);
 void thread_set_nice (int);

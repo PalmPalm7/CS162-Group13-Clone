@@ -103,7 +103,6 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   list_init (&lock_list);
-  list_empty (&lock_list);
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
@@ -396,7 +395,8 @@ void thread_sema_foreach(thread_action_func *func,void *aux)
 {
   struct list_elem *e;
   ASSERT (intr_get_level () == INTR_OFF);
-
+  if(list_empty(&lock_list))
+  printf("check\n");
   for (e = list_begin (&lock_list); e != list_end (&lock_list);
        e = list_next (e))
     {
@@ -407,7 +407,10 @@ void thread_sema_foreach(thread_action_func *func,void *aux)
 }
 
 
-
+void thread_lock_list_add(struct list_elem *elem)
+{
+  list_push_front(&lock_list,elem);
+}
 
 
 
@@ -478,7 +481,6 @@ priority_donation_selfcheck (struct thread *t)
     }
   }
   t->priority = max;
-  //printf("%d\n",max);
 }
 
 /* */
@@ -500,6 +502,12 @@ void priority_donation_release(struct thread *t,struct semaphore *sema)
   priority_donation_selfcheck(t);
 }
 
+
+int
+thread_lock_list_empty(void)
+{
+  return list_empty(&lock_list);
+}
 
 
 

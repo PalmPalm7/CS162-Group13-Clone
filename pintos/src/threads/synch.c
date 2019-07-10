@@ -45,10 +45,7 @@
 
 
 
-struct list *lock_list;
 
-
-static int lock_list_flag = 0;
 
 /* Modified to check whether lock_list is initialized*/
 void
@@ -75,57 +72,8 @@ void thread_action_check_and_set(struct thread *t,void *aux){
 }
 
 
-// void
-// sema_down (struct semaphore *sema)
-// {
-//   enum intr_level old_level;
-
-//   ASSERT (sema != NULL);
-//   ASSERT (!intr_context ());
-
-//   old_level = intr_disable ();
-
-
-//   struct list_elem *e;
-//   if (!lock_list_flag)
-//   {
-//     lock_list = return_lock_list();
-//     lock_list_flag = 1;
-//   }
-
-// //find who owns this lock by search the lock_list which all the element owns a lock will in this list
-//   while (sema->value == 0)
-//     {
-
-//       // this is sth i can't understand,it takes me so long time to spot this bug area.
-//       // for(e = list_begin (lock_list); e != list_end (lock_list);
-//       //     e = list_next (e))
-//       // {
-//       //   printf("%p",e);
-//       //   printf("loop\n");
-//       //   struct thread *t = list_entry (e, struct thread, sema_elem);
-//       //   int ret_val = priority_donation_check_and_set(t,sema,thread_current()->priority);
-//       // }
-
-//       thread_sema_foreach(thread_action_check_and_set,sema);
-//       list_push_front (&sema->waiters, &thread_current ()->elem);
-//       thread_block (); 
-//     }
-//   sema->value--;
-
-//   list_push_front(lock_list,&thread_current()->sema_elem);
-//   thread_current ()->lock_own++;
-//   thread_current ()->donation.priority_donation_slots \
-//   [thread_current ()->donation.count].sema = sema;
-//   thread_current ()->donation.priority_donation_slots \
-//   [thread_current ()->donation.count++].priority_donation = thread_current()->priority;
-//   intr_set_level (old_level);
-// }
-
-
-
 void
-sema_down (struct semaphore *sema) 
+sema_down (struct semaphore *sema)
 {
   enum intr_level old_level;
 
@@ -133,28 +81,74 @@ sema_down (struct semaphore *sema)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  while (sema->value == 0) 
-    {
-      /*
-        here we do following things
-        1. update all the sema->waiters' priority  
-        (the slot of priority and changes the effective 
-        priority after modfiy the slot) and change the count of slot.
-        2. change the own_lock(++)
+  
 
-      */
-      list_push_back (&sema->waiters, &thread_current ()->elem);
-      thread_block ();
+  struct list_elem *e;
+  
+
+//find who owns this lock by search the lock_list which all the element owns a lock will in this list
+  while (sema->value == 0)
+    {
+
+      // this is sth i can't understand,it takes me so long time to spot this bug area.
+      // for(e = list_begin (lock_list); e != list_end (lock_list);
+      //     e = list_next (e))
+      // {
+      //   printf("%p",e);
+      //   printf("loop\n");
+      //   struct thread *t = list_entry (e, struct thread, sema_elem);
+      //   int ret_val = priority_donation_check_and_set(t,sema,thread_current()->priority);
+      // }
+
+      thread_sema_foreach(thread_action_check_and_set,sema);
+      list_push_front (&sema->waiters, &thread_current ()->elem);
+      thread_block (); 
     }
   sema->value--;
-  /* Set the slot of thread owns the sema
-    1.set thread->slot[count++].sema = current_sema
-    2.set priority of previous thread to current thread
-  
-  */
 
+  //list_push_front(lock_list,&thread_current()->sema_elem);
+  thread_lock_list_add(&thread_current()->sema_elem);
+  thread_current ()->lock_own++;
+  thread_current ()->donation.priority_donation_slots \
+  [thread_current ()->donation.count].sema = sema;
+  thread_current ()->donation.priority_donation_slots \
+  [thread_current ()->donation.count++].priority_donation = thread_current()->priority;
   intr_set_level (old_level);
 }
+
+
+
+// void
+// sema_down (struct semaphore *sema) 
+// {
+//   enum intr_level old_level;
+
+//   ASSERT (sema != NULL);
+//   ASSERT (!intr_context ());
+
+//   old_level = intr_disable ();
+//   while (sema->value == 0) 
+//     {
+//       /*
+//         here we do following things
+//         1. update all the sema->waiters' priority  
+//         (the slot of priority and changes the effective 
+//         priority after modfiy the slot) and change the count of slot.
+//         2. change the own_lock(++)
+
+//       */
+//       list_push_back (&sema->waiters, &thread_current ()->elem);
+//       thread_block ();
+//     }
+//   sema->value--;
+//   /* Set the slot of thread owns the sema
+//     1.set thread->slot[count++].sema = current_sema
+//     2.set priority of previous thread to current thread
+  
+//   */
+
+//   intr_set_level (old_level);
+// }
 
 /* Down or "P" operation on a semaphore, but only if the
    semaphore is not already 0.  Returns true if the semaphore is
