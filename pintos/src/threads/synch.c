@@ -71,12 +71,21 @@ sema_down (struct semaphore *sema)
       /*
         here we do following things
         1. update all the sema->waiters' priority  
-        2. change the own_lock 
+        (the slot of priority and changes the effective 
+        priority after modfiy the slot) and change the count of slot.
+        2. change the own_lock(++)
+
       */
       list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
     }
   sema->value--;
+  /* Set the slot of thread owns the sema
+    1.set thread->slot[count++].sema = current_sema
+    2.set priority of previous thread to current thread
+  
+  */
+
   intr_set_level (old_level);
 }
 
