@@ -178,11 +178,11 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-  struct list_elem *curr_elem, *next_elem;
+  struct list_elem *next_elem;
   if (list_empty (&sleep_list))
     return;
-
-  *curr_elem = list_begin (&sleep_list);
+  struct list_elem *curr_elem = list_begin (&sleep_list);
+   
   while (curr_elem != list_end (&sleep_list))
   {
     struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
