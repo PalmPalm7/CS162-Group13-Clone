@@ -98,8 +98,8 @@ timer_sleep (int64_t ticks)
    list_insert_ordered (&sleep_list, &t->elem, 
                         wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
 
-   while (timer_elapsed (start) < ticks)
-    thread_yield ();
+//    while (timer_elapsed (start) < ticks)
+//     thread_yield ();
                                                  /* Need interrupt handler for timer_sleep to wake up threads */
 }
 
