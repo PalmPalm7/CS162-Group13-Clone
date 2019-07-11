@@ -93,9 +93,11 @@ timer_sleep (int64_t ticks)
   ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
   int64_t start = timer_ticks ();
   struct thread *t = thread_current();
-  t->wake_time = start + ticks;                 /* Set the time that the thread must awaken at. */
-  t->status = THREAD_BLOCKED;                   /* Set the thread to be blocked as an extra precaution */
-  list_insert_ordered (&sleep_list, &t->elem, wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
+  if (ticks > 0) {
+      t->wake_time = start + ticks;                 /* Set the time that the thread must awaken at. */
+      t->status = THREAD_BLOCKED;                   /* Set the thread to be blocked as an extra precaution */
+      list_insert_ordered (&sleep_list, &t->elem, wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
+  }
 
 //    while (timer_elapsed (start) < ticks)
 //     thread_yield ();
@@ -163,6 +165,15 @@ void
 timer_ndelay (int64_t ns)
 {
   real_time_delay (ns, 1000 * 1000 * 1000);
+}
+
+/* Returns True if thread_1 has an earlier wake time than thread_2 and false otherwise. */
+static bool
+wake_time_comp (const struct list_elem *elem_1, const struct list_elem *elem_2, void *aux) 
+{
+   struct thread *thread_1 = list_entry (elem_1, struct thread, elem);
+   struct thread *thread_2 = list_entry (elem_2, struct thread, elem);
+   return (thread_2->wake_time >= thread_1->wake_time);
 }
 
 /* Prints timer statistics. */
