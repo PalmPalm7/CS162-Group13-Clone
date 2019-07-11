@@ -26,13 +26,6 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
-/* List of processes in a sleeping state from timer_sleep(). */
-static struct list sleep_list;
-
-
-/* List of process that currently own a lock */
-// static struct list lock_list;
-
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -106,13 +99,10 @@ thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
-//   list_init (&lock_list);
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-  list_init (&sleep_list);
   
-
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -245,15 +235,16 @@ thread_create (const char *name, int priority,
   
 
   /* Initiate the member variables for priority donation */
-//   t->lock_own = 0;
-//   t->orginal_priority = t->priority;
-//   t->donation.count = 0;
-//   int i;
-//   for(i = 0; i < MAX_DONATION_NUM; i++)
-//   {
-//     t->donation.priority_donation_slots[i].priority_donation = -1;
-//     t->donation.priority_donation_slots[i].sema = NULL;
-//   }
+  t->lock_own = 0;
+  t->orginal_priority = t->priority;
+  t->donation.count = 0;
+  int i;
+  for(i = 0; i < MAX_DONATION_NUM; i++)
+  {
+    
+    t->donation.priority_donation_slots[i].priority_donation = -1;
+    t->donation.priority_donation_slots[i].sema = NULL;
+  }
   
   /* Add to run queue. */
   thread_unblock (t);
@@ -397,6 +388,13 @@ thread_foreach (thread_action_func *func, void *aux)
 //   struct list_elem *e;
 //   ASSERT (intr_get_level () == INTR_OFF);
 //   intr_disable();
+
+//   if(list_empty(&lock_list))
+//   printf("EMPTY\n");
+//   int n = list_size(&lock_list);
+//   printf("SIZE IS:%d\n",n);
+
+
 //   printf("ADDED:%p\n",one_elem);
 //   printf("HEAD ADDRESS:%p\n",list_head (&lock_list));
 //   printf("FIRST ELEMENT:%p\n",list_begin (&lock_list));
@@ -454,78 +452,71 @@ thread_set_priority (int new_priority)
 /* check thread t's priority donation slots find if any 
     slot's sema got the semaphore if it find one set it to current priority and
     return non -1  */
-// int 
-// priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority)
-// {
-//   int i=0;
-//   for (i = 0; i < t->donation.count; i++)
-//   {
-//     if (t->donation.priority_donation_slots[i].sema == sema)
-//     {
-//       if (t->donation.priority_donation_slots[i].priority_donation < current_priority)
-//       {
-//         t->donation.priority_donation_slots[i].priority_donation = current_priority;
-//         priority_donation_selfcheck (t);
-//       }
-//       return t->donation.priority_donation_slots[i].priority_donation;
-//     }
-//     return -1;
-//   }
-// }
+
+int 
+priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority)
+{
+  int i=0;
+  for (i = 0; i < t->donation.count; i++)
+  {
+    if (t->donation.priority_donation_slots[i].sema == sema)
+    {
+      if (t->donation.priority_donation_slots[i].priority_donation < current_priority)
+      {
+        t->donation.priority_donation_slots[i].priority_donation = current_priority;
+        priority_donation_selfcheck (t);
+      }
+      return t->donation.priority_donation_slots[i].priority_donation;
+    }
+  }
+  return -1;
+}
 /* maintain the property of priority donation slot which is if own_lock is not zero
   the priority always equal the biggest one in priority_donation_slot .  */
 
-// void 
-// priority_donation_selfcheck (struct thread *t)
-// {
-//   int max = 0;
-//   int max_index = 0;
-//   int j,i;
-//   for(j = t->donation.count; j < MAX_DONATION_NUM; j++)
-//   {
-//     t->donation.priority_donation_slots[j].priority_donation = -1;
-//     t->donation.priority_donation_slots[j].sema = NULL;
-//   }
+void 
+priority_donation_selfcheck (struct thread *t)
+{
+  int max = 0;
+  int max_index = 0;
+  int j,i;
+  for(j = t->donation.count; j < MAX_DONATION_NUM; j++)
+  {
+    t->donation.priority_donation_slots[j].priority_donation = -1;
+    t->donation.priority_donation_slots[j].sema = NULL;
+  }
 
 
-//   for(i = 0; i < t->donation.count; i++)
-//   {
-//     if (t->donation.priority_donation_slots[i].priority_donation > max)
-//     {
-//       max = t->donation.priority_donation_slots[i].priority_donation;
-//       max_index = i;
-//     }
-//   }
-//   t->priority = max;
-// }
-
-// /* */
-// void priority_donation_release(struct thread *t,struct semaphore *sema)
-// {
-//   int i,j;
-//   for (i = 0; i < t->donation.count; i++)
-//   {
-//       if(t->donation.priority_donation_slots[i].sema == sema){
-//         for(j = i; j < t->donation.count - 1; j++)
-//         {
-//           t->donation.priority_donation_slots[j].priority_donation = t->donation.priority_donation_slots[j+1].priority_donation;
-//           t->donation.priority_donation_slots[j].sema = t->donation.priority_donation_slots[j+1].sema;
-//         }
-//         t->donation.count--;
-        
-//       }
-//   }
-//   priority_donation_selfcheck(t);
-// }
+  for(i = 0; i < t->donation.count; i++)
+  {
+    if (t->donation.priority_donation_slots[i].priority_donation > max)
+    {
+      max = t->donation.priority_donation_slots[i].priority_donation;
+      max_index = i;
+    }
+  }
 
 
-// int
-// thread_lock_list_empty(void)
-// {
-//   return list_empty(&lock_list);
-// }
+  t->priority = max;
+}
 
-
+/* */
+void priority_donation_release(struct thread *t,struct semaphore *sema)
+{
+  int i,j;
+  for (i = 0; i < t->donation.count; i++)
+  {
+      if(t->donation.priority_donation_slots[i].sema == sema){
+        for(j = i; j < t->donation.count - 1; j++)
+        {
+          t->donation.priority_donation_slots[j].priority_donation = t->donation.priority_donation_slots[j+1].priority_donation;
+          t->donation.priority_donation_slots[j].sema = t->donation.priority_donation_slots[j+1].sema;
+        }
+        t->donation.count--;
+      }
+  }
+  priority_donation_selfcheck(t);
+}
 
 /* Returns the current thread's priority. */
 int

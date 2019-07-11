@@ -1,6 +1,6 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-#define MAX_DONATION_NUM 10
+#define MAX_DONATION_NUM 20
 
 
 
@@ -14,20 +14,21 @@
 #include "threads/synch.h"
 #include "devices/timer.h"
 
-// struct prioriy_donation_unit
-//   {
-//     struct semahpore *sema;
-//     int priority_donation;
-//   };
+struct prioriy_donation_unit
+  {
+    struct semahpore *sema;
+    int priority_donation;
+  };
 
-// struct priority_donation
-//   {
-//     struct prioriy_donation_unit priority_donation_slots[MAX_DONATION_NUM];
-//     int count;
-//   };
+struct priority_donation
+  {
+    struct prioriy_donation_unit priority_donation_slots[MAX_DONATION_NUM];
+    int count;
+  };
 
-/* List of processes in a sleeping state from timer_sleep(). */
-static struct list sleep_list;
+/* List of processes in THREAD_READY state, that is, processes
+   that are ready to run but not actually running. */
+static struct list ready_list;
 
 
 /* States in a thread's life cycle. */
@@ -131,7 +132,7 @@ struct thread
     
     int lock_own;
 
-//     struct priority_donation donation;
+    struct priority_donation donation;
 
 
 
@@ -175,17 +176,18 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 struct list_elem * pop_out_max_priority_thread(struct list *thread_list);
-// int priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority);
-// void priority_donation_selfcheck(struct thread *t);
-// void priority_donation_release(struct thread *t,struct semaphore *sema);
-// int thread_lock_list_empty(void);
-// void thread_lock_list_add(struct list_elem *elem);
+int priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority);
+void priority_donation_selfcheck(struct thread *t);
+void priority_donation_release(struct thread *t,struct semaphore *sema);
+int thread_lock_list_empty(void);
+void thread_lock_list_add(struct list_elem *elem);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-// struct list* return_lock_list(void);
-// void thread_sema_foreach(thread_action_func *func,void *aux);
+struct list* return_lock_list (void);
+void thread_sema_foreach (thread_action_func *func,void *aux);
+
 
 #endif /* threads/thread.h */
