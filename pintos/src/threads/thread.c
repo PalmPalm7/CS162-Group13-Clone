@@ -29,7 +29,7 @@ static struct list sleep_list;
 
 
 /* List of process that currently own a lock */
-static struct list lock_list;
+// static struct list lock_list;
 
 
 /* List of all processes.  Processes are added to this list
@@ -243,15 +243,15 @@ thread_create (const char *name, int priority,
   
 
   /* Initiate the member variables for priority donation */
-  t->lock_own = 0;
-  t->orginal_priority = t->priority;
-  t->donation.count = 0;
-  int i;
-  for(i = 0; i < MAX_DONATION_NUM; i++)
-  {
-    t->donation.priority_donation_slots[i].priority_donation = -1;
-    t->donation.priority_donation_slots[i].sema = NULL;
-  }
+//   t->lock_own = 0;
+//   t->orginal_priority = t->priority;
+//   t->donation.count = 0;
+//   int i;
+//   for(i = 0; i < MAX_DONATION_NUM; i++)
+//   {
+//     t->donation.priority_donation_slots[i].priority_donation = -1;
+//     t->donation.priority_donation_slots[i].sema = NULL;
+//   }
   
   /* Add to run queue. */
   thread_unblock (t);
