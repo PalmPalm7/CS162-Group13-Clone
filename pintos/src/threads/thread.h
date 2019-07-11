@@ -187,8 +187,4 @@ int thread_get_load_avg (void);
 // struct list* return_lock_list(void);
 // void thread_sema_foreach(thread_action_func *func,void *aux);
 
-/* Returns True if thread_1 has an earlier wake time than thread_2 and false otherwise. */
-static bool
-wake_time_comp (const struct list_elem *a, const struct list_elem *b, void *aux); 
-
 #endif /* threads/thread.h */
