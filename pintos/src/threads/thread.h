@@ -129,7 +129,7 @@ struct thread
     
     int lock_own;
 
-    struct priority_donation donation;
+//     struct priority_donation donation;
 
 
 
