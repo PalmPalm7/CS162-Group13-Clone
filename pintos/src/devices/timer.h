@@ -21,7 +21,7 @@ void timer_usleep (int64_t microseconds);
 void timer_nsleep (int64_t nanoseconds);
 
 /* Comparison function to determine relative time until waking up */
-static bool wake_time_comp (const struct list_elem *a, const struct list_elem *b, void *aux); 
+bool wake_time_comp (const struct list_elem *a, const struct list_elem *b, void *aux); 
 
 
 /* Busy waits. */
