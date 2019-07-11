@@ -182,15 +182,15 @@ timer_interrupt (struct intr_frame *args UNUSED)
   if (list_empty (&sleep_list))
     return;
 
-  curr_elem = list_begin (sleep_list);
+  curr_elem = &list_begin (sleep_list);
   while (curr_elem != list_end (&sleep_list))
   {
     struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
     next_elem = list_next(curr_elem);
     
-    if (curr_elem->wake_time <= ticks)
+    if (curr_thread->wake_time <= ticks)
       {
-        t->status = THREAD_READY; 
+        curr_thread->status = THREAD_READY; 
         list_remove (curr_elem);
         curr_elem = next_elem;
       }
