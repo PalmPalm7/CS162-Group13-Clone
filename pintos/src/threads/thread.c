@@ -104,7 +104,7 @@ thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
-  list_init (&lock_list);
+//   list_init (&lock_list);
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
@@ -517,11 +517,11 @@ thread_set_priority (int new_priority)
 // }
 
 
-int
-thread_lock_list_empty(void)
-{
-  return list_empty(&lock_list);
-}
+// int
+// thread_lock_list_empty(void)
+// {
+//   return list_empty(&lock_list);
+// }
 
 
 
