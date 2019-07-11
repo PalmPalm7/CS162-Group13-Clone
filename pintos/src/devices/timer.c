@@ -94,9 +94,9 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
   struct thread *t = thread_current();
   t->wake_time = start + ticks;                 /* Set the time that the thread must awaken at. */
-//   t->status = THREAD_BLOCKED;                /* Set the thread to be blocked as an extra precaution */
-//    list_insert_ordered (&sleep_list, &t->wake_time, 
-//                         wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
+  t->status = THREAD_BLOCKED;                   /* Set the thread to be blocked as an extra precaution */
+   list_insert_ordered (&sleep_list, &t->wake_time, 
+                        wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
 
    while (timer_elapsed (start) < ticks)
     thread_yield ();
@@ -178,6 +178,28 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  struct list_elem *curr_elem, *next_elem;
+  if (list_empty (&sleep_list))
+    return;
+
+  curr_elem = list_begin (sleep_list);
+  while (curr_elem != list_end (&sleep_list))
+  {
+    struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
+    next_elem = list_next(curr_elem);
+    
+    if (curr_elem->wake_time <= ticks)
+      {
+        t->status = THREAD_READY; 
+        list_remove (curr_elem);
+        curr_elem = next_elem;
+      }
+     else
+     {
+        thread_tick ();
+        return;
+     }
+  }
   thread_tick ();
 }
 
