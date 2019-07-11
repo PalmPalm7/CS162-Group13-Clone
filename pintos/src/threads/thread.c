@@ -29,7 +29,6 @@ static struct list sleep_list;
 
 
 /* List of process that currently own a lock */
-static struct list lock_list;
 
 
 /* List of all processes.  Processes are added to this list
@@ -104,14 +103,11 @@ thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
-  list_init (&lock_list);
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&sleep_list);
   
-
-
 
 
   /* Set up a thread structure for the running thread. */
@@ -252,6 +248,7 @@ thread_create (const char *name, int priority,
   int i;
   for(i = 0; i < MAX_DONATION_NUM; i++)
   {
+    
     t->donation.priority_donation_slots[i].priority_donation = -1;
     t->donation.priority_donation_slots[i].sema = NULL;
   }
@@ -393,43 +390,40 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-void thread_sema_foreach(thread_action_func *func,void *aux)
-{
-  struct list_elem *e;
-  ASSERT (intr_get_level () == INTR_OFF);
-  intr_disable();
-  printf("ADDED:%p\n",one_elem);
-  printf("HEAD ADDRESS:%p\n",list_head (&lock_list));
-  printf("FIRST ELEMENT:%p\n",list_begin (&lock_list));
-  printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
-  list_begin (&lock_list)->next = list_end (&lock_list);
-  printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
-  printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
-  printf("FIRST ELEMENT's PREV:%p\n",list_begin (&lock_list)->prev);
-  printf("TAIL ADDRESS:%p\n",list_end (&lock_list));
-  printf("TAIL ADDRESS's previous:%p\n",list_end (&lock_list)->prev);
-  printf("%p\n",list_end (&lock_list)->next);
-  //e = list_begin (&lock_list);
-  printf("FINAL CHECK:%p\n",list_begin (&lock_list)->next);
-
-  for (e = list_begin (&lock_list); e != list_end (&lock_list);
-       e = list_next (e))
-    {
-      printf("%p\n",e);
-      printf("loop\n");
-      struct thread *t = list_entry (e, struct thread, allelem);
-      func (t, aux);
-    }
-}
+// void thread_sema_foreach(thread_action_func *func,void *aux)
+// {
+//   struct list_elem *e;
+//   ASSERT (intr_get_level () == INTR_OFF);
+//   intr_disable();
+//   if(list_empty(&lock_list))
+//   printf("EMPTY\n");
+//   int n = list_size(&lock_list);
+//   printf("SIZE IS:%d\n",n);
 
 
-void thread_lock_list_add(struct list_elem *elem)
-{
-  one_elem = elem;
-  list_push_back(&lock_list,elem);
-}
+//   printf("ADDED:%p\n",one_elem);
+//   printf("HEAD ADDRESS:%p\n",list_head (&lock_list));
+//   printf("FIRST ELEMENT:%p\n",list_begin (&lock_list));
+//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+//   list_begin (&lock_list)->next = list_end (&lock_list);
+//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+//   printf("FIRST ELEMENT's PREV:%p\n",list_begin (&lock_list)->prev);
+//   printf("TAIL ADDRESS:%p\n",list_end (&lock_list));
+//   printf("TAIL ADDRESS's previous:%p\n",list_end (&lock_list)->prev);
+//   printf("%p\n",list_end (&lock_list)->next);
+//   //e = list_begin (&lock_list);
+//   printf("FINAL CHECK:%p\n",list_begin (&lock_list)->next);
 
-
+//   for (e = list_begin (&lock_list); e != list_end (&lock_list);
+//        e = list_next (e))
+//     {
+//       printf("%p\n",e);
+//       printf("loop\n");
+//       struct thread *t = list_entry (e, struct thread, allelem);
+//       func (t, aux);
+//     }
+// }
 
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -470,8 +464,8 @@ priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int cu
       }
       return t->donation.priority_donation_slots[i].priority_donation;
     }
-    return -1;
   }
+  return -1;
 }
 /* maintain the property of priority donation slot which is if own_lock is not zero
   the priority always equal the biggest one in priority_donation_slot .  */
@@ -497,6 +491,8 @@ priority_donation_selfcheck (struct thread *t)
       max_index = i;
     }
   }
+
+
   t->priority = max;
 }
 
@@ -513,18 +509,11 @@ void priority_donation_release(struct thread *t,struct semaphore *sema)
           t->donation.priority_donation_slots[j].sema = t->donation.priority_donation_slots[j+1].sema;
         }
         t->donation.count--;
-        
       }
   }
   priority_donation_selfcheck(t);
 }
 
-
-int
-thread_lock_list_empty(void)
-{
-  return list_empty(&lock_list);
-}
 
 
 

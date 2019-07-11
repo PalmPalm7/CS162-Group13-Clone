@@ -1,6 +1,6 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-#define MAX_DONATION_NUM 10
+#define MAX_DONATION_NUM 20
 
 
 
