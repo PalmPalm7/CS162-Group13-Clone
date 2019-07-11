@@ -173,7 +173,7 @@ wake_time_comp (const struct list_elem *elem_1, const struct list_elem *elem_2, 
 {
    struct thread *thread_1 = list_entry (elem_1, struct thread, elem);
    struct thread *thread_2 = list_entry (elem_2, struct thread, elem);
-   return (thread_2->wake_time >= thread_1->wake_time);
+   return thread_2->wake_time >= thread_1->wake_time;
 }
 
 /* Prints timer statistics. */
