@@ -92,7 +92,6 @@ timer_sleep (int64_t ticks)
 {
   ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
   int64_t start = timer_ticks ();
-  
   struct thread *t = thread_current();
   t->wake_time = start + ticks;                 /* Set the time that the thread must awaken at. */
 //   t->status = THREAD_BLOCKED;                /* Set the thread to be blocked as an extra precaution */
