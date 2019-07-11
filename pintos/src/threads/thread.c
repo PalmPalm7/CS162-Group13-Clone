@@ -112,13 +112,21 @@ thread_init (void)
   
 
 
-
   /*initialize load average*/
   if(thread_mlfqs){
     load_avg = 0;
     mlfqs_ticks = timer_ticks();
   }
 
+<<<<<<< HEAD
+  /*initialize load average*/
+  if(thread_mlfqs){
+    load_avg = 0;
+    mlfqs_ticks = timer_ticks();
+  }
+
+=======
+>>>>>>> parent of 6d8f5da... Not yet finished
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
