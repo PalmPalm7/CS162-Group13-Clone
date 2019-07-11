@@ -111,7 +111,6 @@ thread_init (void)
   list_init (&sleep_list);
   
 
-
   /*initialize load average*/
   if(thread_mlfqs){
     load_avg = 0;
@@ -125,6 +124,15 @@ thread_init (void)
     mlfqs_ticks = timer_ticks();
   }
 
+<<<<<<< HEAD
+  /*initialize load average*/
+  if(thread_mlfqs){
+    load_avg = 0;
+    mlfqs_ticks = timer_ticks();
+  }
+
+=======
+>>>>>>> parent of 6d8f5da... Not yet finished
 =======
 >>>>>>> parent of 6d8f5da... Not yet finished
   /* Set up a thread structure for the running thread. */
