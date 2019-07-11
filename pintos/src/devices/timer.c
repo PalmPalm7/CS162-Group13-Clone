@@ -97,6 +97,7 @@ void
 timer_sleep (int64_t ticks)
 {
   ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
+  intr_set_level(INTR_OFF);
   int64_t start = timer_ticks ();
   struct thread *t = thread_current();
   if (ticks > 0) {
@@ -104,10 +105,11 @@ timer_sleep (int64_t ticks)
       // t->status = THREAD_BLOCKED;                   /* Set the thread to be blocked as an extra precaution */
       list_insert_ordered (&sleep_list, &t->elem, wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
       // pop_out_max_priority_thread(&ready_list);
-      intr_set_level(INTR_OFF);
       thread_block();
       intr_set_level(INTR_ON);
   }
+  // while (timer_elapsed (start) < ticks)
+  //   thread_yield();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -202,9 +204,9 @@ timer_interrupt (struct intr_frame *args UNUSED)
   while (curr_elem != list_end (&sleep_list))
   {
     struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
-    next_elem = list_next(curr_elem);
     if (curr_thread->wake_time <= ticks)
       {
+        next_elem = list_next(curr_elem);
         list_remove (curr_elem);
         thread_unblock(curr_thread);
         curr_elem = next_elem;

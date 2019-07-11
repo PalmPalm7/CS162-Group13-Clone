@@ -676,6 +676,7 @@ init_thread (struct thread *t, const char *name, int priority)
   /*set values for scheduling*/
   t->nice_value = 0;
   t->recent_cpu = 0;
+  t->wake_time = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
