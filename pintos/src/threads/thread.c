@@ -561,6 +561,16 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void)
 {
+//  if(timer_ticks() % (int64_t)100 == 0){
+//    fixed_point_t former_load_avg = fix_int(load_avg); /*get former load average*/
+//    former_load_avg = fix_unscale(former_load_avg, 100); /* divide by 100 */
+//    fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
+//                                         fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
+//    new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
+//    load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
+//   // load_avg = kernel_ticks;
+//  }
+//
   return load_avg;
 }
 
