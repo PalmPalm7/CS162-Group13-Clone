@@ -118,6 +118,7 @@ thread_init (void)
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   /*initialize load average*/
   if(thread_mlfqs){
     load_avg = 0;
@@ -131,6 +132,8 @@ thread_init (void)
     mlfqs_ticks = timer_ticks();
   }
 
+=======
+>>>>>>> parent of 6d8f5da... Not yet finished
 =======
 >>>>>>> parent of 6d8f5da... Not yet finished
 =======
