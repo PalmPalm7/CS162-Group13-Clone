@@ -95,8 +95,7 @@ timer_sleep (int64_t ticks)
   struct thread *t = thread_current();
   t->wake_time = start + ticks;                 /* Set the time that the thread must awaken at. */
   t->status = THREAD_BLOCKED;                   /* Set the thread to be blocked as an extra precaution */
-   list_insert_ordered (&sleep_list, &t->elem, 
-                        wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
+  list_insert_ordered (&sleep_list, &t->elem, wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
 
 //    while (timer_elapsed (start) < ticks)
 //     thread_yield ();
