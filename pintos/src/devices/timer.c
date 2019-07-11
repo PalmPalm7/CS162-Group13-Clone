@@ -182,7 +182,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
   if (list_empty (&sleep_list))
     return;
 
-  curr_elem = &list_begin (sleep_list);
+  curr_elem = &list_begin (&sleep_list);
   while (curr_elem != list_end (&sleep_list))
   {
     struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
