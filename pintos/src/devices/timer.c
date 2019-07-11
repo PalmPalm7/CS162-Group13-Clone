@@ -170,10 +170,10 @@ timer_ndelay (int64_t ns)
 
 /* Returns True if thread_1 has an earlier wake time than thread_2 and false otherwise. */
 static bool
-wake_time_comp (const struct list_elem *elem_1, const struct list_elem *elem_2, void *aux) 
+wake_time_comp (const struct list_elem *x, const struct list_elem *y, void *aux UNUSED) 
 {
-   struct thread *thread_1 = list_entry (elem_1, struct thread, elem);
-   struct thread *thread_2 = list_entry (elem_2, struct thread, elem);
+   struct thread *thread_1 = list_entry (x, struct thread, elem);
+   struct thread *thread_2 = list_entry (y, struct thread, elem);
    return thread_2->wake_time >= thread_1->wake_time;
 }
 
