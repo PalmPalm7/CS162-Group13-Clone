@@ -390,41 +390,41 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-void thread_sema_foreach(thread_action_func *func,void *aux)
-{
-  struct list_elem *e;
-  ASSERT (intr_get_level () == INTR_OFF);
-  intr_disable();
-  printf("ADDED:%p\n",one_elem);
-  printf("HEAD ADDRESS:%p\n",list_head (&lock_list));
-  printf("FIRST ELEMENT:%p\n",list_begin (&lock_list));
-  printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
-  list_begin (&lock_list)->next = list_end (&lock_list);
-  printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
-  printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
-  printf("FIRST ELEMENT's PREV:%p\n",list_begin (&lock_list)->prev);
-  printf("TAIL ADDRESS:%p\n",list_end (&lock_list));
-  printf("TAIL ADDRESS's previous:%p\n",list_end (&lock_list)->prev);
-  printf("%p\n",list_end (&lock_list)->next);
-  //e = list_begin (&lock_list);
-  printf("FINAL CHECK:%p\n",list_begin (&lock_list)->next);
+// void thread_sema_foreach(thread_action_func *func,void *aux)
+// {
+//   struct list_elem *e;
+//   ASSERT (intr_get_level () == INTR_OFF);
+//   intr_disable();
+//   printf("ADDED:%p\n",one_elem);
+//   printf("HEAD ADDRESS:%p\n",list_head (&lock_list));
+//   printf("FIRST ELEMENT:%p\n",list_begin (&lock_list));
+//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+//   list_begin (&lock_list)->next = list_end (&lock_list);
+//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+//   printf("FIRST ELEMENT's PREV:%p\n",list_begin (&lock_list)->prev);
+//   printf("TAIL ADDRESS:%p\n",list_end (&lock_list));
+//   printf("TAIL ADDRESS's previous:%p\n",list_end (&lock_list)->prev);
+//   printf("%p\n",list_end (&lock_list)->next);
+//   //e = list_begin (&lock_list);
+//   printf("FINAL CHECK:%p\n",list_begin (&lock_list)->next);
 
-  for (e = list_begin (&lock_list); e != list_end (&lock_list);
-       e = list_next (e))
-    {
-      printf("%p\n",e);
-      printf("loop\n");
-      struct thread *t = list_entry (e, struct thread, allelem);
-      func (t, aux);
-    }
-}
+//   for (e = list_begin (&lock_list); e != list_end (&lock_list);
+//        e = list_next (e))
+//     {
+//       printf("%p\n",e);
+//       printf("loop\n");
+//       struct thread *t = list_entry (e, struct thread, allelem);
+//       func (t, aux);
+//     }
+// }
 
 
-void thread_lock_list_add(struct list_elem *elem)
-{
-  one_elem = elem;
-  list_push_back(&lock_list,elem);
-}
+// void thread_lock_list_add(struct list_elem *elem)
+// {
+//   one_elem = elem;
+//   list_push_back(&lock_list,elem);
+// }
 
 
 
@@ -452,69 +452,69 @@ thread_set_priority (int new_priority)
 /* check thread t's priority donation slots find if any 
     slot's sema got the semaphore if it find one set it to current priority and
     return non -1  */
-int 
-priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority)
-{
-  int i=0;
-  for (i = 0; i < t->donation.count; i++)
-  {
-    if (t->donation.priority_donation_slots[i].sema == sema)
-    {
-      if (t->donation.priority_donation_slots[i].priority_donation < current_priority)
-      {
-        t->donation.priority_donation_slots[i].priority_donation = current_priority;
-        priority_donation_selfcheck (t);
-      }
-      return t->donation.priority_donation_slots[i].priority_donation;
-    }
-    return -1;
-  }
-}
+// int 
+// priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority)
+// {
+//   int i=0;
+//   for (i = 0; i < t->donation.count; i++)
+//   {
+//     if (t->donation.priority_donation_slots[i].sema == sema)
+//     {
+//       if (t->donation.priority_donation_slots[i].priority_donation < current_priority)
+//       {
+//         t->donation.priority_donation_slots[i].priority_donation = current_priority;
+//         priority_donation_selfcheck (t);
+//       }
+//       return t->donation.priority_donation_slots[i].priority_donation;
+//     }
+//     return -1;
+//   }
+// }
 /* maintain the property of priority donation slot which is if own_lock is not zero
   the priority always equal the biggest one in priority_donation_slot .  */
 
-void 
-priority_donation_selfcheck (struct thread *t)
-{
-  int max = 0;
-  int max_index = 0;
-  int j,i;
-  for(j = t->donation.count; j < MAX_DONATION_NUM; j++)
-  {
-    t->donation.priority_donation_slots[j].priority_donation = -1;
-    t->donation.priority_donation_slots[j].sema = NULL;
-  }
+// void 
+// priority_donation_selfcheck (struct thread *t)
+// {
+//   int max = 0;
+//   int max_index = 0;
+//   int j,i;
+//   for(j = t->donation.count; j < MAX_DONATION_NUM; j++)
+//   {
+//     t->donation.priority_donation_slots[j].priority_donation = -1;
+//     t->donation.priority_donation_slots[j].sema = NULL;
+//   }
 
 
-  for(i = 0; i < t->donation.count; i++)
-  {
-    if (t->donation.priority_donation_slots[i].priority_donation > max)
-    {
-      max = t->donation.priority_donation_slots[i].priority_donation;
-      max_index = i;
-    }
-  }
-  t->priority = max;
-}
+//   for(i = 0; i < t->donation.count; i++)
+//   {
+//     if (t->donation.priority_donation_slots[i].priority_donation > max)
+//     {
+//       max = t->donation.priority_donation_slots[i].priority_donation;
+//       max_index = i;
+//     }
+//   }
+//   t->priority = max;
+// }
 
-/* */
-void priority_donation_release(struct thread *t,struct semaphore *sema)
-{
-  int i,j;
-  for (i = 0; i < t->donation.count; i++)
-  {
-      if(t->donation.priority_donation_slots[i].sema == sema){
-        for(j = i; j < t->donation.count - 1; j++)
-        {
-          t->donation.priority_donation_slots[j].priority_donation = t->donation.priority_donation_slots[j+1].priority_donation;
-          t->donation.priority_donation_slots[j].sema = t->donation.priority_donation_slots[j+1].sema;
-        }
-        t->donation.count--;
+// /* */
+// void priority_donation_release(struct thread *t,struct semaphore *sema)
+// {
+//   int i,j;
+//   for (i = 0; i < t->donation.count; i++)
+//   {
+//       if(t->donation.priority_donation_slots[i].sema == sema){
+//         for(j = i; j < t->donation.count - 1; j++)
+//         {
+//           t->donation.priority_donation_slots[j].priority_donation = t->donation.priority_donation_slots[j+1].priority_donation;
+//           t->donation.priority_donation_slots[j].sema = t->donation.priority_donation_slots[j+1].sema;
+//         }
+//         t->donation.count--;
         
-      }
-  }
-  priority_donation_selfcheck(t);
-}
+//       }
+//   }
+//   priority_donation_selfcheck(t);
+// }
 
 
 int
