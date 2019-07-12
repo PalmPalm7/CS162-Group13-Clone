@@ -206,11 +206,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
     struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
     if (curr_thread->wake_time <= ticks)
       {
+        intr_set_level(INTR_OFF);
         next_elem = list_next(curr_elem);
         list_remove (curr_elem);
         thread_unblock(curr_thread);
         curr_elem = next_elem;
-        thread_yield();
+        intr_set_level(INTR_ON);
+        // thread_yield();
       }
      else
      {
