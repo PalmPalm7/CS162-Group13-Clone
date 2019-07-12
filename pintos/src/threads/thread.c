@@ -110,7 +110,6 @@ thread_init (void)
   /*initialize load average*/
   if(thread_mlfqs){
     load_avg = 0;
-    mlfqs_ticks = timer_ticks();
   }
 
 }
@@ -132,6 +131,10 @@ thread_start (void)
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
 }
+
+/*debug use variables, should be deleted afterwards*/
+int schedule_ticks = 0;
+
 
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
@@ -160,8 +163,9 @@ thread_tick (void)
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
                                            fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
-      //load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
-      load_avg = kernel_ticks;
+      load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
+      //load_avg = timer_ticks();
+      load_avg = list_size(&ready_list)*100;
     }
   }
 
@@ -430,30 +434,20 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice)
 {
-  running_thread()->nice_value = nice; 
+  thread_current()->nice_value = nice; 
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void)
 {
-  return running_thread()->nice_value;
+  return thread_current()->nice_value;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void)
 {
-//  if(timer_ticks() % (int64_t)100 == 0){
-//    fixed_point_t former_load_avg = fix_int(load_avg); /*get former load average*/
-//    former_load_avg = fix_unscale(former_load_avg, 100); /* divide by 100 */
-//    fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
-//                                         fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
-//    new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
-//    load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
-//   // load_avg = kernel_ticks;
-//  }
-//
   return load_avg;
 }
 
@@ -716,7 +710,8 @@ schedule (void)
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
-
+  /*should be deleted afterwards*/
+  schedule_ticks++;
   if (cur != next)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
