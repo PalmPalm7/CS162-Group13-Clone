@@ -4,6 +4,7 @@
 #include <random.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
@@ -11,6 +12,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -24,8 +26,6 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
-/* List of processes in a sleeping state from timer_sleep(). */
-static struct list sleep_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -40,6 +40,8 @@ static struct thread *initial_thread;
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
 
+
+static struct list_elem* one_elem;
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame
   {
@@ -54,7 +56,6 @@ static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
 
 static int load_avg; /* load avg for mlfqs*/
-static int64_t mlfqs_ticks;
 
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
@@ -90,6 +91,8 @@ static tid_t allocate_tid (void);
 
    It is not safe to call thread_current() until this function
    finishes. */
+
+   /* Modified to initialize lock_list*/
 void
 thread_init (void)
 {
@@ -98,9 +101,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-  list_init (&sleep_list);
-
-
+  
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -130,6 +131,25 @@ thread_start (void)
 
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
+
+}
+
+void update_all_recent_cpu(struct thread* t,void *aux){
+  
+  fixed_point_t former_load_avg = fix_int(load_avg); /*get former load average*/
+  former_load_avg = fix_unscale(former_load_avg, 100); /* divide by 100 */ 
+  /*upgrading recent_cpu for the theead*/
+  fixed_point_t t_recent_cpu = fix_unscale(fix_int(t->recent_cpu), 100);
+  fixed_point_t recent_cpu = fix_mul(
+                               fix_div(
+                                 fix_scale(former_load_avg, 2), 
+                                 fix_add(fix_scale(former_load_avg, 2), fix_int(1))
+                               ),
+                               t_recent_cpu
+                             );
+  recent_cpu = fix_add(recent_cpu, fix_int(t->nice_value));
+  recent_cpu = fix_scale(recent_cpu, 100);
+  t->recent_cpu = fix_round(recent_cpu);
 }
 
 /*debug use variables, should be deleted afterwards*/
@@ -158,14 +178,23 @@ thread_tick (void)
     t->recent_cpu += 100;
     /*calculate each second*/
     if(timer_ticks() % (int64_t)100 == 0){
+      
       fixed_point_t former_load_avg = fix_int(load_avg); /*get former load average*/
       former_load_avg = fix_unscale(former_load_avg, 100); /* divide by 100 */
+    
+      thread_foreach(update_all_recent_cpu,NULL); 
+      
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
                                            fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
+<<<<<<< HEAD
       load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
       //load_avg = timer_ticks();
       load_avg = list_size(&ready_list)*100;
+=======
+     load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
+      // load_avg = timer_ticks();
+>>>>>>> a88538ccba6caa9b77b107e61d443b5859fd01db
     }
   }
 
@@ -233,7 +262,20 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
+  
 
+  /* Initiate the member variables for priority donation */
+  t->lock_own = 0;
+  t->orginal_priority = t->priority;
+  t->donation.count = 0;
+  int i;
+  for(i = 0; i < MAX_DONATION_NUM; i++)
+  {
+    
+    t->donation.priority_donation_slots[i].priority_donation = -1;
+    t->donation.priority_donation_slots[i].sema = NULL;
+  }
+  
   /* Add to run queue. */
   thread_unblock (t);
 
@@ -371,12 +413,60 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+// void thread_sema_foreach(thread_action_func *func,void *aux)
+// {
+//   struct list_elem *e;
+//   ASSERT (intr_get_level () == INTR_OFF);
+//   intr_disable();
+
+//   if(list_empty(&lock_list))
+//   printf("EMPTY\n");
+//   int n = list_size(&lock_list);
+//   printf("SIZE IS:%d\n",n);
+
+
+//   printf("ADDED:%p\n",one_elem);
+//   printf("HEAD ADDRESS:%p\n",list_head (&lock_list));
+//   printf("FIRST ELEMENT:%p\n",list_begin (&lock_list));
+//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+//   list_begin (&lock_list)->next = list_end (&lock_list);
+//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
+//   printf("FIRST ELEMENT's PREV:%p\n",list_begin (&lock_list)->prev);
+//   printf("TAIL ADDRESS:%p\n",list_end (&lock_list));
+//   printf("TAIL ADDRESS's previous:%p\n",list_end (&lock_list)->prev);
+//   printf("%p\n",list_end (&lock_list)->next);
+//   //e = list_begin (&lock_list);
+//   printf("FINAL CHECK:%p\n",list_begin (&lock_list)->next);
+
+//   for (e = list_begin (&lock_list); e != list_end (&lock_list);
+//        e = list_next (e))
+//     {
+//       printf("%p\n",e);
+//       printf("loop\n");
+//       struct thread *t = list_entry (e, struct thread, allelem);
+//       func (t, aux);
+//     }
+// }
+
+
+// void thread_lock_list_add(struct list_elem *elem)
+// {
+//   one_elem = elem;
+//   list_push_back(&lock_list,elem);
+// }
+
+
+
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority)
 {
   thread_current ()->priority = new_priority;
   thread_yield();
+  if(thread_mlfqs){}
+    //fixed_point_t priority = PRIMAX
 }
 
 
@@ -388,40 +478,77 @@ thread_set_priority (int new_priority)
     3.check if t->own_lock == 0 if so restore the priority to orginal_priority
   */
 
-void 
-thread_priority_donation (struct thread *t,int new_priority)
+
+
+
+/* check thread t's priority donation slots find if any 
+    slot's sema got the semaphore if it find one set it to current priority and
+    return non -1  */
+
+int 
+priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority)
 {
-  enum intr_level old_level;
-  old_level = intr_disable ();
-  int thread_priority_donation_temp = t->priority;
-  if (new_priority > t->priority)
+  int i=0;
+  for (i = 0; i < t->donation.count; i++)
   {
-    t->priority = new_priority;
+    if (t->donation.priority_donation_slots[i].sema == sema)
+    {
+      if (t->donation.priority_donation_slots[i].priority_donation < current_priority)
+      {
+        t->donation.priority_donation_slots[i].priority_donation = current_priority;
+        priority_donation_selfcheck (t);
+      }
+      return t->donation.priority_donation_slots[i].priority_donation;
+    }
+  }
+  return -1;
+}
+/* maintain the property of priority donation slot which is if own_lock is not zero
+  the priority always equal the biggest one in priority_donation_slot .  */
+
+void 
+priority_donation_selfcheck (struct thread *t)
+{
+  int max = 0;
+  int max_index = 0;
+  int j,i;
+  for(j = t->donation.count; j < MAX_DONATION_NUM; j++)
+  {
+    t->donation.priority_donation_slots[j].priority_donation = -1;
+    t->donation.priority_donation_slots[j].sema = NULL;
   }
 
-  intr_set_level (old_level);
 
-  thread_yield ();
+  for(i = 0; i < t->donation.count; i++)
+  {
+    if (t->donation.priority_donation_slots[i].priority_donation > max)
+    {
+      max = t->donation.priority_donation_slots[i].priority_donation;
+      max_index = i;
+    }
+  }
 
-  old_level = intr_disable ();
 
-  if (thread_priority_donation_temp > t->priority)
-    t->priority =thread_priority_donation_temp;
-
-  if (!t->lock_own)
-    t->priority = t->orginal_priority;
-
-  intr_set_level (old_level);
-  
-  thread_yield ();
+  t->priority = max;
 }
 
-void priority_donation_check(struct list *wait)
+/* */
+void priority_donation_release(struct thread *t,struct semaphore *sema)
 {
-  
+  int i,j;
+  for (i = 0; i < t->donation.count; i++)
+  {
+      if(t->donation.priority_donation_slots[i].sema == sema){
+        for(j = i; j < t->donation.count - 1; j++)
+        {
+          t->donation.priority_donation_slots[j].priority_donation = t->donation.priority_donation_slots[j+1].priority_donation;
+          t->donation.priority_donation_slots[j].sema = t->donation.priority_donation_slots[j+1].sema;
+        }
+        t->donation.count--;
+      }
+  }
+  priority_donation_selfcheck(t);
 }
-
-
 
 /* Returns the current thread's priority. */
 int
@@ -549,6 +676,7 @@ init_thread (struct thread *t, const char *name, int priority)
   /*set values for scheduling*/
   t->nice_value = 0;
   t->recent_cpu = 0;
+  t->wake_time = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -621,12 +749,14 @@ next_thread_to_run (void)
 }
 
 
-void pop_out_max_priority_thread(struct list *thread_list,struct thread *max)
+struct list_elem *
+pop_out_max_priority_thread(struct list *thread_list)
 {
   ASSERT(!list_empty(thread_list));
   struct list_elem *e;
   struct list_elem *r;
   struct thread *t;
+  struct thread *max;
   enum intr_level old_level;
   old_level = intr_disable ();
   max = list_entry (list_begin (thread_list), struct thread, elem);
@@ -643,6 +773,7 @@ void pop_out_max_priority_thread(struct list *thread_list,struct thread *max)
     }
   list_remove(r);
   intr_set_level (old_level);
+  return r;
 }
 
 
@@ -730,6 +861,8 @@ allocate_tid (void)
 
   return tid;
 }
+
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
