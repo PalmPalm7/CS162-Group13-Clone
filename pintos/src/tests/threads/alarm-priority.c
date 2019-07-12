@@ -10,7 +10,7 @@
 #include "devices/timer.h"
 
 static thread_func alarm_priority_thread;
-static int64_t wake1_time;
+static int64_t wake_time;
 static struct semaphore wait_sema;
 
 void
@@ -21,7 +21,7 @@ test_alarm_priority (void)
   /* This test does not work with the MLFQS. */
   ASSERT (!thread_mlfqs);
 
-  wake1_time = timer_ticks () + 5 * TIMER_FREQ;
+  wake_time = timer_ticks () + 5 * TIMER_FREQ;
   sema_init (&wait_sema, 0);
 
   for (i = 0; i < 10; i++)
@@ -49,7 +49,7 @@ alarm_priority_thread (void *aux UNUSED)
   /* Now we know we're at the very beginning of a timer tick, so
      we can call timer_sleep() without worrying about races
      between checking the time and a timer interrupt. */
-  timer_sleep (wake1_time - timer_ticks ());
+  timer_sleep (wake_time - timer_ticks ());
 
   /* Print a message on wake-up. */
   msg ("Thread %s woke up.", thread_name ());
