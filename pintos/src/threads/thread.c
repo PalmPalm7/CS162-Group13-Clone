@@ -187,14 +187,9 @@ thread_tick (void)
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
                                            fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
-<<<<<<< HEAD
       load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
       //load_avg = timer_ticks();
       load_avg = list_size(&ready_list)*100;
-=======
-     load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
-      // load_avg = timer_ticks();
->>>>>>> a88538ccba6caa9b77b107e61d443b5859fd01db
     }
   }
 
@@ -463,10 +458,12 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
+  thread* t = thread_current ();
+  if(thread_mlfqs){
+    fixed_point_t priority = PRIMAX -  
+  }
+  
   thread_yield();
-  if(thread_mlfqs){}
-    //fixed_point_t priority = PRIMAX
 }
 
 
