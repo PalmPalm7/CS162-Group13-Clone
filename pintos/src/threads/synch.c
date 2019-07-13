@@ -32,6 +32,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+extern struct list all_list;
 
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
@@ -66,14 +67,8 @@ sema_init (struct semaphore *sema, unsigned value)
 
 
 
-void thread_action_check_and_set(struct thread *t,void *aux){
-  struct semaphore* sema = (struct semaphore*) aux; 
-  priority_donation_check_and_set(t,sema,thread_current()->priority);
-}
-
-
 void
-sema_down (struct semaphore *sema)
+sema_down (struct semaphore *sema) 
 {
   enum intr_level old_level;
 
@@ -81,38 +76,12 @@ sema_down (struct semaphore *sema)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  
-
-  struct list_elem *e;
-  
-
-//find who owns this lock by search the lock_list which all the element owns a lock will in this list
-  while (sema->value == 0)
+  while (sema->value == 0) 
     {
-      thread_foreach(thread_action_check_and_set,sema);
       list_push_back (&sema->waiters, &thread_current ()->elem);
-      thread_block (); 
+      thread_block ();
     }
   sema->value--;
-  int i;
-  for(i = 0; i <= thread_current ()->donation.count; i++)
-  {
-    if((thread_current ()->donation.priority_donation_slots[i].sema) == (sema))
-    {
-      if(thread_current ()->donation.priority_donation_slots[i].priority_donation < thread_current()->priority)
-      {
-        //thread_current ()->donation.priority_donation_slots[i].priority_donation = thread_current()->priority;
-      }
-      intr_set_level (old_level);
-      return;
-    }
-  }
-  thread_current ()->lock_own++;
-  thread_current ()->donation.priority_donation_slots[thread_current ()->donation.count].sema = sema;
-  thread_current ()->donation.priority_donation_slots \
-  [thread_current ()->donation.count++].priority_donation = thread_current()->priority;
-
-  
   intr_set_level (old_level);
 }
 
@@ -151,41 +120,19 @@ sema_try_down (struct semaphore *sema)
 
    This function may be called from an interrupt handler. */
 void
-sema_up (struct semaphore *sema)
+sema_up (struct semaphore *sema) 
 {
   enum intr_level old_level;
-  struct thread *e;
+
   ASSERT (sema != NULL);
-  struct thread *h;
+
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters)){
-    struct thread *t;
-    priority_donation_release(thread_current(),sema);
-    t = list_entry (pop_out_max_priority_thread
-    (&sema->waiters), struct thread, elem);
-    h = t;
-    thread_unblock (t);
-  }
+  if (!list_empty (&sema->waiters)) 
+    thread_unblock (list_entry (pop_out_max_priority_thread (&sema->waiters),
+                                struct thread, elem));
   sema->value++;
   intr_set_level (old_level);
-  thread_yield();
 }
-
-
-// void
-// sema_up (struct semaphore *sema) 
-// {
-//   enum intr_level old_level;
-
-//   ASSERT (sema != NULL);
-
-//   old_level = intr_disable ();
-//   if (!list_empty (&sema->waiters)) 
-//     thread_unblock (list_entry (list_pop_front (&sema->waiters),
-//                                 struct thread, elem));
-//   sema->value++;
-//   intr_set_level (old_level);
-// }
 
 
 static void sema_test_helper (void *sema_);
@@ -244,7 +191,6 @@ void
 lock_init (struct lock *lock)
 {
   ASSERT (lock != NULL);
-
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
 }
@@ -263,9 +209,16 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
+  enum intr_level old_level;
+  /* Check other thread which own the lock*/
 
+  old_level = intr_disable ();
+  thread_foreach (thread_priority_donation,lock);
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+  thread_current()->priority_donation[thread_current()->lock_own].lock = lock;
+  thread_current()->lock_own++;
+  intr_set_level (old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -301,9 +254,113 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-
+  int i = 0;
+  enum intr_level old_level;
+  
+  old_level = intr_disable();
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+    
+  for( i = 0; i < thread_current()->lock_own; i++)
+  {
+    if (thread_current()->priority_donation[i].lock == lock)
+    {
+      int j = i;
+      for(j = i; j < thread_current()->lock_own-1; j++)
+      {
+        thread_current()->priority_donation[j].lock =  thread_current()->priority_donation[j+1].lock;
+        thread_current()->priority_donation[j].priority =  thread_current()->priority_donation[j+1].priority;
+      }
+      thread_current()->lock_own--;
+      break;
+    }
+  }
+  int max = thread_current()->orginal_priority;
+  for (i = 0; i < thread_current()->lock_own; i++)
+  {
+    if(thread_current()->priority_donation[i].priority > max)
+    {
+      max = thread_current()->priority_donation[i].priority;
+    }
+  }
+  thread_current()->priority = max;
+  thread_yield();
+  intr_set_level(old_level);
+
+
+
+  // if (!t)
+  // {
+
+  //   thread_yield ();
+  //   intr_set_level (old_level);
+  //   return;
+  // }
+
+  // for ( i = 0; i < thread_current()->lock_own; i++)
+  // {
+  //   if(thread_current()->locks[i] == lock)
+  //   {
+  //     int j = i;
+  //     for( j = i; j < thread_current()->lock_own-1; j++)
+  //     {
+  //       thread_current()->locks[j] = thread_current()->locks[j+1];
+  //     }  
+  //     thread_current()->lock_own--;
+  //     break;
+  //   }
+  // }
+  // for (i = 0; i < thread_current()->donation_count; i++)
+  // {
+  //   if (thread_current()->priority_donation[i].lock == lock && thread_current()->priority_donation[i].t == t)
+  //   {
+  //     int k = i;
+
+  //     for(k = i; k < thread_current()->donation_count - 1;k++){
+  //       thread_current()->priority_donation[k].lock = thread_current()->priority_donation[k+1].lock;
+  //       thread_current()->priority_donation[k].priority = thread_current()->priority_donation[k+1].priority;
+  //       thread_current()->priority_donation[k].t = thread_current()->priority_donation[k+1].t;
+  //     }
+  //     thread_current()->donation_count--;
+  //   }
+  // }
+  // int max = thread_current()->orginal_priority;
+  // for (i = 0; i < thread_current()->donation_count; i++)
+  // {
+  //   if(thread_current()->priority_donation[i].priority > max)
+  //   {
+  //     max = thread_current()->priority_donation[i].priority;
+  //   }
+  // }
+  // thread_current()->priority = max;
+  // thread_yield ();
+  // intr_set_level (old_level);
+  
+  // for( i = 0; i < thread_current()->lock_own; i++)
+  // {
+  //   if (thread_current()->priority_donation[i].lock == lock)
+  //   {
+  //     int j = i;
+  //     for(j = i; j < thread_current()->lock_own-1; j++)
+  //     {
+  //       thread_current()->priority_donation[j] =  thread_current()->priority_donation[j+1];
+  //     }
+  //     thread_current()->lock_own--;
+  //     break;
+  //   }
+  // }
+  // int max = -1;
+  // for( i = 0; i < thread_current()->lock_own; i++)
+  // {
+  //   if(thread_current()->priority_donation[i].priority > max)
+  //   max = thread_current()->priority_donation[i].priority;
+  // }
+  // if(max > thread_current()->priority)
+  // thread_current()->priority = max;
+
+  // if(thread_current()->lock_own == 0)
+  // thread_current()->priority = thread_current()->orginal_priority;
+
 }
 
 /* Returns true if the current thread holds LOCK, false
