@@ -159,6 +159,10 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 
+      int ready_size = list_size(&ready_list);
+
+  // printf("%d\n", list_size(&ready_list));
+
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
@@ -172,19 +176,35 @@ thread_tick (void)
     //timer_calibrate();
  /* for mlfqs*/ 
     t->recent_cpu += 100;
+    // printf("%d\n", timer_ticks());
+    // printf("%d\n", timer_ticks() % TIMER_FREQ);
     /*calculate each second*/
-    if(timer_ticks() % (int64_t)100 == 0){
+    if(timer_ticks() % TIMER_FREQ == 0){
+      // printf("HEY LOOK HERE\n");
       
       fixed_point_t former_load_avg = fix_int(load_avg); /*get former load average*/
+      // printf("%d\n old avg", former_load_avg);
       former_load_avg = fix_unscale(former_load_avg, 100); /* divide by 100 */
+      // printf("%d\nafter unscale", former_load_avg);
     
-      thread_foreach(update_all_recent_cpu,NULL); 
+      thread_foreach(update_all_recent_cpu, NULL); 
+
+      int curr_thread_adjustment;
+
+      if (running_thread() != idle_thread) {
+        curr_thread_adjustment = 1;
+      } else {
+        curr_thread_adjustment = 0;
+      }
       
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
-                                           fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
+                                           fix_scale(fix_frac(1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
+      // printf("%d\n after comp", new_load_avg);
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
+      // printf("%d\n scaled", new_load_avg);
      load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
-      // load_avg = timer_ticks();
+       // load_avg = list_size(&ready_list)*100;
+       // printf("%d load avg\n", load_avg);
     }
   }
 
@@ -252,27 +272,10 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
-  
 
-  /* Initiate the member variables for priority donation */
-  t->lock_own = 0;
-  t->orginal_priority = t->priority;
-  t->donation.count = 0;
-  int i;
-  for(i = 0; i < MAX_DONATION_NUM; i++)
-  {
-    
-    t->donation.priority_donation_slots[i].priority_donation = -1;
-    t->donation.priority_donation_slots[i].sema = NULL;
-  }
-  
   /* Add to run queue. */
   thread_unblock (t);
 
-  /* If the thread create a thread with bigger priority yield the CPU */
-  /* Newly added*/
-  if(thread_current()->priority < t->priority)
-    thread_yield();
   return tid;
 }
 
@@ -701,52 +704,52 @@ alloc_frame (struct thread *t, size_t size)
    empty.  (If the running thread can continue running, then it
    will be in the run queue.)  If the run queue is empty, return
    idle_thread. */
-// static struct thread *
-// next_thread_to_run (void)
-// {
-//   if (list_empty (&ready_list))
-//     return idle_thread;
-//   else
-//     return list_entry (list_pop_front (&ready_list), struct thread, elem);
-// }
-
-
-
-
-
-
-
 static struct thread *
 next_thread_to_run (void)
 {
-  struct list_elem *e;
-  struct list_elem *r;
-  struct thread *max;
-  struct thread *t;
-  enum intr_level old_level;
-
   if (list_empty (&ready_list))
     return idle_thread;
   else
-  {
-    old_level = intr_disable ();
-    max = list_entry (list_begin (&ready_list), struct thread, elem);
-    r = list_begin (&ready_list);
-    for(e = list_begin (&ready_list);e != list_end (&ready_list);
-        e = list_next (e))
-      {
-        t = list_entry (e, struct thread, elem);
-        if (t->priority > max->priority)
-        {
-          max = t;
-          r = e;
-        }
-      }
-    list_remove(r);
-    intr_set_level (old_level);
-  }
-  return max;
+    return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
+
+
+
+
+
+
+
+// static struct thread *
+// next_thread_to_run (void)
+// {
+//   struct list_elem *e;
+//   struct list_elem *r;
+//   struct thread *max;
+//   struct thread *t;
+//   enum intr_level old_level;
+
+//   if (list_empty (&ready_list))
+//     return idle_thread;
+//   else
+//   {
+//     old_level = intr_disable ();
+//     max = list_entry (list_begin (&ready_list), struct thread, elem);
+//     r = list_begin (&ready_list);
+//     for(e = list_begin (&ready_list);e != list_end (&ready_list);
+//         e = list_next (e))
+//       {
+//         t = list_entry (e, struct thread, elem);
+//         if (t->priority > max->priority)
+//         {
+//           max = t;
+//           r = e;
+//         }
+//       }
+//     list_remove(r);
+//     intr_set_level (old_level);
+//   }
+//   return max;
+// }
 
 
 struct list_elem *
