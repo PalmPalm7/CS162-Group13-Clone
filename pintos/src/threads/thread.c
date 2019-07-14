@@ -110,7 +110,7 @@ thread_init (void)
  
   /*initialize load average*/
   if(thread_mlfqs){
-    load_avg = fix_int(0);
+    load_avg = fix_int (0);
   }
 
 }
@@ -125,7 +125,7 @@ thread_start (void)
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
   
-  load_avg = fix_int(0);
+  load_avg = fix_int (0);
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -155,8 +155,8 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 
-  int ready_size = list_size(&ready_list);
-  int now_ticks = timer_ticks();
+  int ready_size = list_size (&ready_list);
+  int now_ticks = timer_ticks ();
 
   /* Update statistics. */
   if (t == idle_thread)
@@ -167,28 +167,31 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-  if(thread_mlfqs){
+  if (thread_mlfqs){
  /* for mlfqs*/ 
-    t->recent_cpu = fix_add(t->recent_cpu, fix_int(1));
+    t->recent_cpu = fix_add (t->recent_cpu, fix_int(1));
     /*calculate each second*/
-    if(now_ticks % TIMER_FREQ == 0){
-      
-      thread_foreach(update_all_recent_cpu, NULL); 
+    if (now_ticks % TIMER_FREQ == 0)
+      {
+      thread_foreach (update_all_recent_cpu, NULL); 
 
       int curr_thread_adjustment;
 
-      if (running_thread() != idle_thread) {
-        curr_thread_adjustment = 1;
-      } else {
-        curr_thread_adjustment = 0;
-      }
+      if (running_thread () != idle_thread) 
+        {
+          curr_thread_adjustment = 1;
+        } 
+      else 
+        {
+          curr_thread_adjustment = 0;
+        }
         
-      fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , load_avg),
-                                           fix_scale(fix_frac(1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
+      fixed_point_t new_load_avg = fix_add (fix_mul (fix_frac (59 , 60) , load_avg),
+                                           fix_scale (fix_frac (1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
      load_avg = new_load_avg; /*truncate to integer and store in global variables*/
     }
-     if(now_ticks % 4 ==0) 
-       thread_foreach(thread_calculate_priority,NULL);
+     if(now_ticks % 4 == 0) 
+       thread_foreach (thread_calculate_priority, NULL);
   }
 
   /* Enforce preemption. */
@@ -460,15 +463,18 @@ void thread_priority_chain_donation(struct lock* lock,int priority_donation)
 void
 thread_set_priority (int new_priority)
 {
-  if (thread_mlfqs) {
-    struct thread* t = running_thread ();
-    thread_calculate_priority (t,NULL);
-  } else {
-    if(thread_current()->lock_own == 0) 
-    thread_current ()->priority = new_priority;  
-    thread_current ()->orginal_priority = new_priority; 
-    thread_yield();
-  }
+  if (thread_mlfqs) 
+    {
+      struct thread* t = running_thread ();
+      thread_calculate_priority (t,NULL);
+    } 
+  else 
+    {
+      if(thread_current()->lock_own == 0) 
+        thread_current ()->priority = new_priority;  
+      thread_current ()->orginal_priority = new_priority; 
+      thread_yield();
+    }
 }
 
 
@@ -478,7 +484,7 @@ thread_calculate_priority (struct thread* t, void *aux UNUSED)
   fixed_point_t new_priority = fix_int (PRI_MAX);
   fixed_point_t recent_cpu = fix_unscale (t->recent_cpu, 4);
   new_priority = fix_sub (new_priority, recent_cpu);
-  new_priority = fix_sub (new_priority, fix_scale (fix_int(t->nice_value), 2));
+  new_priority = fix_sub (new_priority, fix_scale (fix_int (t->nice_value), 2));
   t->priority  = fix_round (new_priority);
  }
 
