@@ -191,7 +191,7 @@ thread_tick (void)
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
       load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
       //load_avg = timer_ticks();
-      load_avg = list_size(&ready_list)*100;
+      //load_avg = list_size(&ready_list)*100;
     }
   }
 
@@ -472,7 +472,12 @@ thread_set_priority (int new_priority)
     3.check if t->own_lock == 0 if so restore the priority to orginal_priority
   */
 
+void
+thread_calculate_priority(void)
+{
+  
 
+}
 
 
 
