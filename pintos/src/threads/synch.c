@@ -53,20 +53,17 @@ void
 sema_init (struct semaphore *sema, unsigned value)
 {
   ASSERT (sema != NULL);
+
   sema->value = value;
   list_init (&sema->waiters);
 }
 
 /* Down or "P" operation on a semaphore.  Waits for SEMA's value
    to become positive and then atomically decrements it.
-
    This function may sleep, so it must not be called within an
    interrupt handler.  This function may be called with
    interrupts disabled, but if it sleeps then the next scheduled
    thread will probably turn interrupts back on. */
-
-
-
 void
 sema_down (struct semaphore *sema) 
 {
@@ -85,13 +82,9 @@ sema_down (struct semaphore *sema)
   intr_set_level (old_level);
 }
 
-
-
-
 /* Down or "P" operation on a semaphore, but only if the
    semaphore is not already 0.  Returns true if the semaphore is
    decremented, false otherwise.
-
    This function may be called from an interrupt handler. */
 bool
 sema_try_down (struct semaphore *sema)
@@ -107,9 +100,8 @@ sema_try_down (struct semaphore *sema)
       sema->value--;
       success = true;
     }
-  else{
+  else
     success = false;
-  }
   intr_set_level (old_level);
 
   return success;
@@ -117,7 +109,6 @@ sema_try_down (struct semaphore *sema)
 
 /* Up or "V" operation on a semaphore.  Increments SEMA's value
    and wakes up one thread of those waiting for SEMA, if any.
-
    This function may be called from an interrupt handler. */
 void
 sema_up (struct semaphore *sema) 
@@ -127,13 +118,12 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
+
   if (!list_empty (&sema->waiters)) 
     thread_unblock (list_entry (pop_out_max_priority_thread (&sema->waiters),
                                 struct thread, elem));
-
   sema->value++;
   intr_set_level (old_level);
-  thread_yield();
 }
 
 
