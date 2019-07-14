@@ -183,7 +183,7 @@ thread_tick (void)
  /* for mlfqs*/ 
     t->recent_cpu += 100;
     // printf("%d\n", timer_ticks());
-    printf("%d\n", timer_ticks() % TIMER_FREQ);
+    // printf("%d\n", timer_ticks() % TIMER_FREQ);
     /*calculate each second*/
     if(timer_ticks() % TIMER_FREQ == 0){
       // printf("HEY LOOK HERE\n");
@@ -195,21 +195,22 @@ thread_tick (void)
     
       thread_foreach(update_all_recent_cpu, NULL); 
 
-      int curr_thread_adjustment = 0;
+      int curr_thread_adjustment;
 
-//      if (running_thread() != idle_thread) {
-//        curr_thread_adjustment = 1;
-//      } else {
-//        curr_thread_adjustment = 0;
-//      }
-//      
+      if (running_thread() != idle_thread) {
+        curr_thread_adjustment = 1;
+      } else {
+        curr_thread_adjustment = 0;
+      }
+      
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
                                            fix_scale(fix_frac(1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
-     // printf("%d\n after comp", new_load_avg);
+      // printf("%d\n after comp", new_load_avg);
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
-      load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
-      //load_avg = timer_ticks();
-        //load_avg = list_size(&ready_list)*100;
+      // printf("%d\n scaled", new_load_avg);
+     load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
+       // load_avg = list_size(&ready_list)*100;
+       // printf("%d load avg\n", load_avg);
     }
   }
 
@@ -218,6 +219,7 @@ thread_tick (void)
     intr_yield_on_return ();
 
 }
+
 
 /* Prints thread statistics. */
 void
@@ -279,14 +281,16 @@ thread_create (const char *name, int priority,
   sf->ebp = 0;
 
   /* Initiate the member variables for priority donation */
-  t->lock_own = 0;
-  t->orginal_priority = priority;
-  int i;
-  for(i = 0; i < MAX_DONATION_NUM; i++)
-  {
-   t->priority_donation[i].lock = NULL;
-   t->priority_donation[i].priority = -1; 
- 
+  if (!thread_mlfqs) {
+    t->lock_own = 0;
+    t->orginal_priority = priority;
+    int i;
+    for(i = 0; i < MAX_DONATION_NUM; i++)
+    {
+     t->priority_donation[i].lock = NULL;
+     t->priority_donation[i].priority = -1; 
+   
+    }
   }
   
   /* Add to run queue. */
@@ -665,34 +669,42 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void)
 {
-  struct list_elem *e;
-  struct list_elem *r;
-  struct thread *max;
-  struct thread *t;
-  enum intr_level old_level;
 
-  if (list_empty (&ready_list))
-    return idle_thread;
-  else
-  {
-    old_level = intr_disable ();
-    max = list_entry (list_begin (&ready_list), struct thread, elem);
-    r = list_begin (&ready_list);
-    
-    for(e = list_begin (&ready_list);e != list_end (&ready_list);
-        e = list_next (e))
-      {
-        t = list_entry (e, struct thread, elem);
-        if (t->priority > max->priority)
+  if (thread_mlfqs) {
+      if (list_empty (&ready_list))
+        return idle_thread;
+      else
+        return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  } else {
+    struct list_elem *e;
+    struct list_elem *r;
+    struct thread *max;
+    struct thread *t;
+    enum intr_level old_level;
+
+    if (list_empty (&ready_list))
+      return idle_thread;
+    else
+    {
+      old_level = intr_disable ();
+      max = list_entry (list_begin (&ready_list), struct thread, elem);
+      r = list_begin (&ready_list);
+      
+      for(e = list_begin (&ready_list);e != list_end (&ready_list);
+          e = list_next (e))
         {
-          max = t;
-          r = e;
+          t = list_entry (e, struct thread, elem);
+          if (t->priority > max->priority)
+          {
+            max = t;
+            r = e;
+          }
         }
-      }
-    list_remove(r);
-    intr_set_level (old_level);
+      list_remove(r);
+      intr_set_level (old_level);
+    }
+    return max;
   }
-  return max;
 }
 
 
@@ -813,8 +825,11 @@ schedule (void)
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
-  /*should be deleted afterwards*/
-  schedule_ticks++;
+
+  if (!thread_mlfqs) {
+    /*should be deleted afterwards*/
+    schedule_ticks++;
+  }
   if (cur != next)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
