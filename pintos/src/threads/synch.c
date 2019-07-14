@@ -113,8 +113,7 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters))
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+    thread_unblock (list_entry (pop_out_max_priority_thread (&sema->waiters), struct thread, elem));
   sema->value++;
   intr_set_level (old_level);
 
@@ -248,16 +247,20 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  int i = 0;  
+  enum intr_level old_level; 
+
+  if (thread_mlfqs) {
+  lock->holder = NULL;
+  sema_up (&lock->semaphore);
+
+  } else {
+
+  old_level = intr_disable();
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 
-  if (!thread_mlfqs) {
-
-    int i = 0;  
-    enum intr_level old_level; 
-
-    old_level = intr_disable();
     for(i = 0; i < thread_current()->lock_own; i++)  
     { 
       if (thread_current()->priority_donation[i].lock == lock)  
