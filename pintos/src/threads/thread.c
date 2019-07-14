@@ -156,7 +156,7 @@ thread_tick (void)
   struct thread *t = thread_current ();
 
   int ready_size = list_size(&ready_list);
-
+  int now_ticks = timer_ticks();
 
   /* Update statistics. */
   if (t == idle_thread)
@@ -171,7 +171,7 @@ thread_tick (void)
  /* for mlfqs*/ 
     t->recent_cpu = fix_add(t->recent_cpu, fix_int(1));
     /*calculate each second*/
-    if(timer_ticks() % TIMER_FREQ == 0){
+    if(now_ticks % TIMER_FREQ == 0){
       
       thread_foreach(update_all_recent_cpu, NULL); 
 
@@ -187,8 +187,8 @@ thread_tick (void)
                                            fix_scale(fix_frac(1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
      load_avg = new_load_avg; /*truncate to integer and store in global variables*/
     }
-     if(timer_ticks() % 4 ==0)
-      thread_foreach(thread_calculate_priority,NULL);
+     if(now_ticks % 4 ==0) 
+       thread_foreach(thread_calculate_priority,NULL);
   }
 
   /* Enforce preemption. */
@@ -789,9 +789,8 @@ schedule (void)
   ASSERT (is_thread (next));
 
 
-   if (thread_mlfqs) { 
-    /*should be deleted afterwards*/  
-    schedule_ticks++; 
+   if (thread_mlfqs && cur != idle_thread) {
+     thread_set_priority(0);
   }
 
   if (cur != next)
