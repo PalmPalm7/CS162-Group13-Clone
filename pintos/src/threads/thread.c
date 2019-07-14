@@ -29,7 +29,9 @@ static struct list ready_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
-static struct list all_list;
+struct list all_list;
+
+
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -261,14 +263,13 @@ thread_create (const char *name, int priority,
 
   /* Initiate the member variables for priority donation */
   t->lock_own = 0;
-  t->orginal_priority = t->priority;
-  t->donation.count = 0;
+  t->orginal_priority = priority;
   int i;
   for(i = 0; i < MAX_DONATION_NUM; i++)
   {
-    
-    t->donation.priority_donation_slots[i].priority_donation = -1;
-    t->donation.priority_donation_slots[i].sema = NULL;
+   t->priority_donation[i].lock = NULL;
+   t->priority_donation[i].priority = -1; 
+ 
   }
   
   /* Add to run queue. */
@@ -276,8 +277,7 @@ thread_create (const char *name, int priority,
 
   /* If the thread create a thread with bigger priority yield the CPU */
   /* Newly added*/
-  if(thread_current()->priority < t->priority)
-    thread_yield();
+  thread_yield();
   return tid;
 }
 
@@ -408,41 +408,39 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-// void thread_sema_foreach(thread_action_func *func,void *aux)
-// {
-//   struct list_elem *e;
-//   ASSERT (intr_get_level () == INTR_OFF);
-//   intr_disable();
+void thread_priority_donation(struct thread *thread, void *lock)
+{
+  lock = (struct lock *)lock;
+  int i = 0;
+  for(i = 0; i < thread->lock_own; i++)
+  {
+    if(thread->priority_donation[i].lock == lock)
+    {
+      if(thread->priority  < thread_current()->priority)
+      {
+        thread->priority_donation[i].priority = thread_current()->priority;
+        thread->priority = thread_current()->priority;
+      }
+    }
+  }
+  return;
 
-//   if(list_empty(&lock_list))
-//   printf("EMPTY\n");
-//   int n = list_size(&lock_list);
-//   printf("SIZE IS:%d\n",n);
 
 
-//   printf("ADDED:%p\n",one_elem);
-//   printf("HEAD ADDRESS:%p\n",list_head (&lock_list));
-//   printf("FIRST ELEMENT:%p\n",list_begin (&lock_list));
-//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
-//   list_begin (&lock_list)->next = list_end (&lock_list);
-//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
-//   printf("FIRST ELEMENT's NEXT:%p\n",list_begin (&lock_list)->next);
-//   printf("FIRST ELEMENT's PREV:%p\n",list_begin (&lock_list)->prev);
-//   printf("TAIL ADDRESS:%p\n",list_end (&lock_list));
-//   printf("TAIL ADDRESS's previous:%p\n",list_end (&lock_list)->prev);
-//   printf("%p\n",list_end (&lock_list)->next);
-//   //e = list_begin (&lock_list);
-//   printf("FINAL CHECK:%p\n",list_begin (&lock_list)->next);
-
-//   for (e = list_begin (&lock_list); e != list_end (&lock_list);
-//        e = list_next (e))
-//     {
-//       printf("%p\n",e);
-//       printf("loop\n");
-//       struct thread *t = list_entry (e, struct thread, allelem);
-//       func (t, aux);
-//     }
-// }
+  // int i = 0;  
+  // for(i = 0; i < thread->lock_own; i++)
+  // {
+  //   if(thread->priority_donation[i].lock == lock)
+  //   {
+  //     if(thread->priority_donation[i].priority < thread_current()->priority)
+  //     {
+  //       thread->priority_donation[i].priority = thread_current()->priority;
+  //       thread->priority = thread_current()->priority;
+  //     }
+  //     break;
+  //   }
+  // }
+}
 
 
 // void thread_lock_list_add(struct list_elem *elem)
@@ -458,11 +456,10 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread* t = thread_current ();
-  if(thread_mlfqs){
-    fixed_point_t priority = PRIMAX -  
-  }
   
+  if(thread_current()->lock_own == 0)
+  thread_current ()->priority = new_priority;
+  thread_current ()->orginal_priority = new_priority;
   thread_yield();
 }
 
@@ -478,74 +475,6 @@ thread_set_priority (int new_priority)
 
 
 
-/* check thread t's priority donation slots find if any 
-    slot's sema got the semaphore if it find one set it to current priority and
-    return non -1  */
-
-int 
-priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority)
-{
-  int i=0;
-  for (i = 0; i < t->donation.count; i++)
-  {
-    if (t->donation.priority_donation_slots[i].sema == sema)
-    {
-      if (t->donation.priority_donation_slots[i].priority_donation < current_priority)
-      {
-        t->donation.priority_donation_slots[i].priority_donation = current_priority;
-        priority_donation_selfcheck (t);
-      }
-      return t->donation.priority_donation_slots[i].priority_donation;
-    }
-  }
-  return -1;
-}
-/* maintain the property of priority donation slot which is if own_lock is not zero
-  the priority always equal the biggest one in priority_donation_slot .  */
-
-void 
-priority_donation_selfcheck (struct thread *t)
-{
-  int max = 0;
-  int max_index = 0;
-  int j,i;
-  for(j = t->donation.count; j < MAX_DONATION_NUM; j++)
-  {
-    t->donation.priority_donation_slots[j].priority_donation = -1;
-    t->donation.priority_donation_slots[j].sema = NULL;
-  }
-
-
-  for(i = 0; i < t->donation.count; i++)
-  {
-    if (t->donation.priority_donation_slots[i].priority_donation > max)
-    {
-      max = t->donation.priority_donation_slots[i].priority_donation;
-      max_index = i;
-    }
-  }
-
-
-  t->priority = max;
-}
-
-/* */
-void priority_donation_release(struct thread *t,struct semaphore *sema)
-{
-  int i,j;
-  for (i = 0; i < t->donation.count; i++)
-  {
-      if(t->donation.priority_donation_slots[i].sema == sema){
-        for(j = i; j < t->donation.count - 1; j++)
-        {
-          t->donation.priority_donation_slots[j].priority_donation = t->donation.priority_donation_slots[j+1].priority_donation;
-          t->donation.priority_donation_slots[j].sema = t->donation.priority_donation_slots[j+1].sema;
-        }
-        t->donation.count--;
-      }
-  }
-  priority_donation_selfcheck(t);
-}
 
 /* Returns the current thread's priority. */
 int
@@ -668,6 +597,8 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->orginal_priority = priority;
+  t->lock_own = 0;
   t->magic = THREAD_MAGIC;
  
   /*set values for scheduling*/
@@ -729,6 +660,7 @@ next_thread_to_run (void)
     old_level = intr_disable ();
     max = list_entry (list_begin (&ready_list), struct thread, elem);
     r = list_begin (&ready_list);
+    
     for(e = list_begin (&ready_list);e != list_end (&ready_list);
         e = list_next (e))
       {
@@ -773,6 +705,30 @@ pop_out_max_priority_thread(struct list *thread_list)
   return r;
 }
 
+struct thread *
+get_next_max_thread(struct list *thread_list)
+{
+  struct list_elem *e;
+  struct list_elem *r;
+  struct thread *t;
+  struct thread *max = NULL;
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  max = list_entry (list_begin (thread_list), struct thread, elem);
+  r = list_begin (thread_list);
+  for(e = list_begin (thread_list);e != list_end (thread_list);
+      e = list_next (e))
+    {
+      t = list_entry (e, struct thread, elem);
+      if (t->priority > max->priority)
+      {
+        max = t;
+        r = e;
+      }
+    }
+  intr_set_level (old_level);
+  return max;
+}
 
 
 /* Completes a thread switch by activating the new thread's page
