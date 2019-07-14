@@ -21,10 +21,14 @@ struct priority_donation{
   int priority;
 };
 
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
-
+struct priority_donation{
+  struct lock *lock;
+  int priority;
+};
 
 
 /* States in a thread's life cycle. */
@@ -127,7 +131,6 @@ struct thread
     
 
     struct priority_donation priority_donation[MAX_DONATION_NUM];
-
     
     struct lock *locks[MAX_DONATION_NUM];
     
@@ -136,6 +139,7 @@ struct thread
     int orginal_priority;
 
     struct lock *waiting_lock;
+
     
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -176,6 +180,7 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+void thread_calculate_priority(void);
 struct list_elem * pop_out_max_priority_thread(struct list *thread_list);
 struct thread *get_next_max_thread(struct list *thread_list);
 void thread_priority_donation(struct thread *thread,void *lock);
