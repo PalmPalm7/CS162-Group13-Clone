@@ -8,9 +8,11 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "threads/synch.h"
 #include "threads/fixed-point.h"
 #include "threads/synch.h"
+#include "devices/timer.h"
 
 
 
@@ -18,6 +20,11 @@ struct priority_donation{
   struct lock *lock;
   int priority;
 };
+
+/* List of processes in THREAD_READY state, that is, processes
+   that are ready to run but not actually running. */
+static struct list ready_list;
+
 
 
 /* States in a thread's life cycle. */
@@ -114,8 +121,13 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+
+    // struct list_elem alarm_elem;           Added to track semaphore 
+
     
+
     struct priority_donation priority_donation[MAX_DONATION_NUM];
+
     
     struct lock *locks[MAX_DONATION_NUM];
     
@@ -180,8 +192,8 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-struct list* return_lock_list(void);
-void thread_sema_foreach(thread_action_func *func,void *aux);
+struct list* return_lock_list (void);
+void thread_sema_foreach (thread_action_func *func,void *aux);
 
 
 #endif /* threads/thread.h */
