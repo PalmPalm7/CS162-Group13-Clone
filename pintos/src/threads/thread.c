@@ -199,12 +199,10 @@ thread_tick (void)
       
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
                                            fix_scale(fix_frac(1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
-      // printf("%d\n after comp", new_load_avg);
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
       // printf("%d\n scaled", new_load_avg);
      load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
        // load_avg = list_size(&ready_list)*100;
-       // printf("%d load avg\n", load_avg);
     }
   }
 
@@ -456,14 +454,13 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  struct thread* t = thread_current();
+  struct thread* t = running_thread();
   fixed_point_t priority = fix_int(PRI_MAX);
   fixed_point_t recent_cpu = fix_int(t->recent_cpu / 4);
   priority = fix_sub(priority, fix_unscale(recent_cpu, 100));
   priority = fix_sub(priority, fix_unscale(fix_int(t->nice_value), 2));
   new_priority = fix_round(priority);
-  thread_current ()->priority = new_priority;
-  thread_yield();
+  running_thread ()->priority = new_priority;
 }
 
 
@@ -710,7 +707,8 @@ next_thread_to_run (void)
     return idle_thread;
   else if (thread_mlfqs){
       struct list_elem* next = list_max (&ready_list,less_priority,NULL);
-      list_remove(next);  
+      list_remove(next); 
+     // printf("priority %d",list_entry(next,struct thread, elem) ->priority); 
       return list_entry (next, struct thread, elem);
    }
   else
@@ -844,10 +842,12 @@ schedule (void)
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
-
+  
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
+  if (thread_mlfqs&& cur != idle_thread)
+    thread_set_priority(0);  
 
   if (cur != next)
     prev = switch_threads (cur, next);
