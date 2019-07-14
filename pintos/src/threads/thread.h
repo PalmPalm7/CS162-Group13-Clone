@@ -1,11 +1,35 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
+#define MAX_DONATION_NUM 20
+
+
+
 
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "threads/synch.h"
 #include "threads/fixed-point.h"
+#include "threads/synch.h"
+#include "devices/timer.h"
+
+struct prioriy_donation_unit
+  {
+    struct semahpore *sema;
+    int priority_donation;
+  };
+
+struct priority_donation
+  {
+    struct prioriy_donation_unit priority_donation_slots[MAX_DONATION_NUM];
+    int count;
+  };
+
+/* List of processes in THREAD_READY state, that is, processes
+   that are ready to run but not actually running. */
+static struct list ready_list;
+
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -91,9 +115,29 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    int64_t wake_time;                  /* Ticks since OS booted when thread should reawaken after sleeping. */
+   
+    /* nice value of the thread*/
+    int nice_value;
+    
+    /*recent cpu for the thread, the struct should store 100 times real value*/
+    int recent_cpu;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+
+    // struct list_elem alarm_elem;           Added to track semaphore 
+
+    
+    // struct list_elem sema_elem;          /* Added to track semaphore */
+    
+    int orginal_priority;
+    
+    int lock_own;
+
+    struct priority_donation donation;
+
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -134,10 +178,19 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+struct list_elem * pop_out_max_priority_thread(struct list *thread_list);
+int priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority);
+void priority_donation_selfcheck(struct thread *t);
+void priority_donation_release(struct thread *t,struct semaphore *sema);
+int thread_lock_list_empty(void);
+void thread_lock_list_add(struct list_elem *elem);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+struct list* return_lock_list (void);
+void thread_sema_foreach (thread_action_func *func,void *aux);
+
 
 #endif /* threads/thread.h */

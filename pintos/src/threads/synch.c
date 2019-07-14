@@ -32,6 +32,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -41,6 +42,12 @@
 
    - up or "V": increment the value (and wake up one waiting
      thread, if any). */
+
+
+
+
+
+/* Modified to check whether lock_list is initialized*/
 void
 sema_init (struct semaphore *sema, unsigned value)
 {
@@ -52,7 +59,6 @@ sema_init (struct semaphore *sema, unsigned value)
 
 /* Down or "P" operation on a semaphore.  Waits for SEMA's value
    to become positive and then atomically decrements it.
-
    This function may sleep, so it must not be called within an
    interrupt handler.  This function may be called with
    interrupts disabled, but if it sleeps then the next scheduled
@@ -78,7 +84,6 @@ sema_down (struct semaphore *sema)
 /* Down or "P" operation on a semaphore, but only if the
    semaphore is not already 0.  Returns true if the semaphore is
    decremented, false otherwise.
-
    This function may be called from an interrupt handler. */
 bool
 sema_try_down (struct semaphore *sema)
@@ -103,7 +108,6 @@ sema_try_down (struct semaphore *sema)
 
 /* Up or "V" operation on a semaphore.  Increments SEMA's value
    and wakes up one thread of those waiting for SEMA, if any.
-
    This function may be called from an interrupt handler. */
 void
 sema_up (struct semaphore *sema)
@@ -119,6 +123,7 @@ sema_up (struct semaphore *sema)
   sema->value++;
   intr_set_level (old_level);
 }
+
 
 static void sema_test_helper (void *sema_);
 
@@ -217,6 +222,9 @@ lock_try_acquire (struct lock *lock)
   success = sema_try_down (&lock->semaphore);
   if (success)
     lock->holder = thread_current ();
+  else{
+    intr_yield_on_return();
+  }
   return success;
 }
 

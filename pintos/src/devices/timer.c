@@ -3,10 +3,13 @@
 #include <inttypes.h>
 #include <round.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <list.h>
 #include "devices/pit.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "lib/kernel/list.h"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -30,6 +33,9 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+/* List of processes in a sleeping state from timer_sleep(). */
+static struct list sleep_list;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -37,6 +43,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init (&sleep_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -89,11 +96,20 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
+  // ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
+  intr_set_level(INTR_OFF);
   int64_t start = timer_ticks ();
-
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks)
-    thread_yield ();
+  struct thread *t = thread_current();
+  if (ticks > 0) {
+      t->wake_time = start + ticks;                  /*Set the time that the thread must awaken at.       */
+      // t->status = THREAD_BLOCKED;                   /* Set the thread to be blocked as an extra precaution */
+      list_insert_ordered (&sleep_list, &t->elem, wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
+      // pop_out_max_priority_thread(&ready_list);
+      thread_block();
+      intr_set_level(INTR_ON);
+  }
+  // while (timer_elapsed (start) < ticks)
+  //   thread_yield();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -159,6 +175,15 @@ timer_ndelay (int64_t ns)
   real_time_delay (ns, 1000 * 1000 * 1000);
 }
 
+/* Returns True if thread_1 has an earlier wake time than thread_2 and false otherwise. */
+static bool 
+wake_time_comp (const struct list_elem *x, const struct list_elem *y, void *aux) 
+{
+   struct thread *thread_1 = list_entry (x, struct thread, elem);
+   struct thread *thread_2 = list_entry (y, struct thread, elem);
+   return thread_2->wake_time >= thread_1->wake_time;
+}
+
 /* Prints timer statistics. */
 void
 timer_print_stats (void)
@@ -171,7 +196,31 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-  thread_tick ();
+  if (!list_empty (&sleep_list)) {
+    struct list_elem *curr_elem = list_begin (&sleep_list);
+    struct list_elem *next_elem;
+     
+    while (curr_elem != list_end (&sleep_list))
+    {
+      struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
+      if (curr_thread->wake_time <= ticks)
+        {
+          // intr_set_level(INTR_OFF);
+          next_elem = list_next(curr_elem);
+          list_remove (curr_elem);
+          thread_unblock(curr_thread);
+          curr_elem = next_elem;
+          // intr_set_level(INTR_ON);
+          // thread_yield();
+        }
+       else
+       {
+          thread_tick ();
+          return;
+       }
+    }
+  }
+  thread_tick();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
