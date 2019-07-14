@@ -187,7 +187,7 @@ thread_tick (void)
                                            fix_scale(fix_frac(1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
      load_avg = new_load_avg; /*truncate to integer and store in global variables*/
     }
-    if(timer_ticks() % 4 ==0)
+     if(timer_ticks() % 4 ==0)
       thread_foreach(thread_calculate_priority,NULL);
   }
 
