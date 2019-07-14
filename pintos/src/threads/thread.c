@@ -487,7 +487,6 @@ thread_set_priority (int new_priority)
 
 void  
 thread_calculate_priority(struct thread* t) {
-  t->recent_cpu = 0;
   fixed_point_t new_priority = fix_int(PRI_MAX);
   fixed_point_t recent_cpu = fix_int(t->recent_cpu / 4);
   new_priority = fix_sub(new_priority, fix_unscale(recent_cpu, 100));
@@ -632,7 +631,6 @@ init_thread (struct thread *t, const char *name, int priority)
     t->orginal_priority = priority; 
     t->lock_own = 0;
   } else {
-    t->recent_cpu = 0;
     fixed_point_t new_priority = fix_int(PRI_MAX);
     fixed_point_t recent_cpu = fix_int(t->recent_cpu / 4);
     new_priority = fix_sub(new_priority, fix_unscale(recent_cpu, 100));
