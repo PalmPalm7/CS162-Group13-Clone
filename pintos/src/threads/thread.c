@@ -199,12 +199,10 @@ thread_tick (void)
       
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
                                            fix_scale(fix_frac(1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
-      // printf("%d\n after comp", new_load_avg);
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
       // printf("%d\n scaled", new_load_avg);
      load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
        // load_avg = list_size(&ready_list)*100;
-       // printf("%d load avg\n", load_avg);
     }
   }
 
@@ -475,10 +473,15 @@ void thread_priority_chain_donation(struct lock* lock,int priority_donation)
 void
 thread_set_priority (int new_priority)
 {
+
   if (thread_mlfqs) {
-    thread_current ()->priority = new_priority;
-    thread_yield();
-      //fixed_point_t priority = PRIMAX
+    struct thread* t = running_thread();
+    fixed_point_t priority = fix_int(PRI_MAX);
+    fixed_point_t recent_cpu = fix_int(t->recent_cpu / 4);
+    priority = fix_sub(priority, fix_unscale(recent_cpu, 100));
+    priority = fix_sub(priority, fix_unscale(fix_int(t->nice_value), 2));
+    new_priority = fix_round(priority);
+    running_thread ()->priority = new_priority;
   } else {
     if(thread_current()->lock_own == 0) 
     thread_current ()->priority = new_priority;  
@@ -506,70 +509,6 @@ void
     slot's sema got the semaphore if it find one set it to current priority and
     return non -1  */
 
-// int 
-// priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority)
-// {
-//   int i=0;
-//   for (i = 0; i < t->donation.count; i++)
-//   {
-//     if (t->donation.priority_donation_slots[i].sema == sema)
-//     {
-//       if (t->donation.priority_donation_slots[i].priority_donation < current_priority)
-//       {
-//         t->donation.priority_donation_slots[i].priority_donation = current_priority;
-//         priority_donation_selfcheck (t);
-//       }
-//       return t->donation.priority_donation_slots[i].priority_donation;
-//     }
-//   }
-//   return -1;
-// }
-/* maintain the property of priority donation slot which is if own_lock is not zero
-  the priority always equal the biggest one in priority_donation_slot .  */
-
-// void 
-// priority_donation_selfcheck (struct thread *t)
-// {
-//   int max = 0;
-//   int max_index = 0;
-//   int j,i;
-//   for(j = t->donation.count; j < MAX_DONATION_NUM; j++)
-//   {
-//     t->donation.priority_donation_slots[j].priority_donation = -1;
-//     t->donation.priority_donation_slots[j].sema = NULL;
-//   }
-
-
-//   for(i = 0; i < t->donation.count; i++)
-//   {
-//     if (t->donation.priority_donation_slots[i].priority_donation > max)
-//     {
-//       max = t->donation.priority_donation_slots[i].priority_donation;
-//       max_index = i;
-//     }
-//   }
-
-
-//   t->priority = max;
-// }
-
-/* */
-// void priority_donation_release(struct thread *t,struct semaphore *sema)
-// {
-//   int i,j;
-//   for (i = 0; i < t->donation.count; i++)
-//   {
-//       if(t->donation.priority_donation_slots[i].sema == sema){
-//         for(j = i; j < t->donation.count - 1; j++)
-//         {
-//           t->donation.priority_donation_slots[j].priority_donation = t->donation.priority_donation_slots[j+1].priority_donation;
-//           t->donation.priority_donation_slots[j].sema = t->donation.priority_donation_slots[j+1].sema;
-//         }
-//         t->donation.count--;
-//       }
-//   }
-//   priority_donation_selfcheck(t);
-// }
 
 /* Returns the current thread's priority. */
 int
@@ -582,30 +521,20 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice)
 {
-  running_thread()->nice_value = nice; 
+   thread_current ()->nice_value = nice; 
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void)
 {
-  return running_thread()->nice_value;
+  return thread_current ()->nice_value;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void)
 {
-//  if(timer_ticks() % (int64_t)100 == 0){
-//    fixed_point_t former_load_avg = fix_int(load_avg); /*get former load average*/
-//    former_load_avg = fix_unscale(former_load_avg, 100); /* divide by 100 */
-//    fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
-//                                         fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
-//    new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
-//    load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
-//   // load_avg = kernel_ticks;
-//  }
-//
   return load_avg;
 }
 
@@ -613,7 +542,7 @@ thread_get_load_avg (void)
 int
 thread_get_recent_cpu (void)
 {
-  return running_thread()->recent_cpu;
+  return thread_current ()->recent_cpu;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -728,6 +657,11 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
+bool less_priority(const struct list_elem *a,const struct list_elem *b,void *aux)
+{
+  return list_entry (a, struct thread, elem) ->priority < 
+         list_entry (b, struct thread, elem) ->priority ;
+}
 /* Chooses and returns the next thread to be scheduled.  Should
    return a thread from the run queue, unless the run queue is
    empty.  (If the running thread can continue running, then it
@@ -736,11 +670,16 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void)
 {
+
   if (thread_mlfqs) {
-    if (list_empty (&ready_list))
-      return idle_thread;
-    else
-      return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    if (list_empty (&ready_list)) {
+        return idle_thread;
+    } else {
+          struct list_elem* next = list_max (&ready_list,less_priority,NULL);
+          list_remove(next); 
+         // printf("priority %d",list_entry(next,struct thread, elem) ->priority); 
+          return list_entry (next, struct thread, elem);
+    }
   } else {
     struct list_elem *e;  
     struct list_elem *r;  
@@ -883,10 +822,12 @@ schedule (void)
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
-
+  
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
+  if (thread_mlfqs&& cur != idle_thread)
+    thread_set_priority(0);  
 
    if (!thread_mlfqs) { 
     /*should be deleted afterwards*/  
