@@ -118,6 +118,9 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+
+    // struct list_elem alarm_elem;           Added to track semaphore 
+
     
     struct priority_donation priority_donation[MAX_DONATION_NUM];
     
