@@ -117,6 +117,9 @@ sema_up (struct semaphore *sema)
                                 struct thread, elem));
   sema->value++;
   intr_set_level (old_level);
+
+  if (!thread_mlfqs)
+    thread_yield();
 }
 
 
@@ -194,8 +197,24 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  if (thread_mlfqs) {
+
+    sema_down (&lock->semaphore);
+    lock->holder = thread_current ();
+  } else {
+    enum intr_level old_level;  
+     /* Check other thread which own the lock*/ 
+    old_level = intr_disable ();  
+    thread_current()->waiting_lock = lock;  
+    thread_foreach (thread_priority_donation,lock); 
+    //thread_priority_donation(lock->holder,lock);  
+    sema_down (&lock->semaphore); 
+    thread_current()->waiting_lock = NULL;  
+    lock->holder = thread_current (); 
+    thread_current()->priority_donation[thread_current()->lock_own].lock = lock;  
+    thread_current()->lock_own++; 
+    intr_set_level (old_level);
+  }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -232,6 +251,39 @@ lock_release (struct lock *lock)
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+
+  if (!thread_mlfqs) {
+
+    int i = 0;  
+    enum intr_level old_level; 
+
+    old_level = intr_disable();
+    for(i = 0; i < thread_current()->lock_own; i++)  
+    { 
+      if (thread_current()->priority_donation[i].lock == lock)  
+      { 
+        int j = i;  
+        for(j = i; j < thread_current()->lock_own-1; j++) 
+        { 
+          thread_current()->priority_donation[j].lock =  thread_current()->priority_donation[j+1].lock; 
+          thread_current()->priority_donation[j].priority =  thread_current()->priority_donation[j+1].priority; 
+        } 
+        thread_current()->lock_own--; 
+        break;  
+      } 
+    } 
+    int max = thread_current()->orginal_priority; 
+    for (i = 0; i < thread_current()->lock_own; i++)  
+    { 
+      if(thread_current()->priority_donation[i].priority > max) 
+      { 
+        max = thread_current()->priority_donation[i].priority;  
+      } 
+    } 
+    thread_current()->priority = max; 
+    intr_set_level(old_level);  
+    thread_yield();
+  }
 }
 
 /* Returns true if the current thread holds LOCK, false
