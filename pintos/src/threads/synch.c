@@ -64,6 +64,8 @@ sema_init (struct semaphore *sema, unsigned value)
    interrupt handler.  This function may be called with
    interrupts disabled, but if it sleeps then the next scheduled
    thread will probably turn interrupts back on. */
+
+
 void
 sema_down (struct semaphore *sema) 
 {
@@ -280,6 +282,7 @@ lock_release (struct lock *lock)
   thread_current()->priority = max;
   intr_set_level(old_level);
   thread_yield();
+
 
 }
 

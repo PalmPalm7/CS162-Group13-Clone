@@ -154,6 +154,10 @@ void update_all_recent_cpu(struct thread* t,void *aux){
   t->recent_cpu = fix_round(recent_cpu);
 }
 
+/*debug use variables, should be deleted afterwards*/
+int schedule_ticks = 0;
+
+
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
@@ -179,7 +183,7 @@ thread_tick (void)
  /* for mlfqs*/ 
     t->recent_cpu += 100;
     // printf("%d\n", timer_ticks());
-    // printf("%d\n", timer_ticks() % TIMER_FREQ);
+    printf("%d\n", timer_ticks() % TIMER_FREQ);
     /*calculate each second*/
     if(timer_ticks() % TIMER_FREQ == 0){
       // printf("HEY LOOK HERE\n");
@@ -191,22 +195,21 @@ thread_tick (void)
     
       thread_foreach(update_all_recent_cpu, NULL); 
 
-      int curr_thread_adjustment;
+      int curr_thread_adjustment = 0;
 
-      if (running_thread() != idle_thread) {
-        curr_thread_adjustment = 1;
-      } else {
-        curr_thread_adjustment = 0;
-      }
-      
+//      if (running_thread() != idle_thread) {
+//        curr_thread_adjustment = 1;
+//      } else {
+//        curr_thread_adjustment = 0;
+//      }
+//      
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
                                            fix_scale(fix_frac(1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
-      // printf("%d\n after comp", new_load_avg);
+     // printf("%d\n after comp", new_load_avg);
       new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
-      // printf("%d\n scaled", new_load_avg);
-     load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
-       // load_avg = list_size(&ready_list)*100;
-       // printf("%d load avg\n", load_avg);
+      load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
+      //load_avg = timer_ticks();
+        //load_avg = list_size(&ready_list)*100;
     }
   }
 
@@ -293,6 +296,9 @@ thread_create (const char *name, int priority,
   if(thread_current()->priority < t->priority)
   thread_yield();
 
+  /* If the thread create a thread with bigger priority yield the CPU */
+  /* Newly added*/
+  thread_yield();
   return tid;
 }
 
@@ -423,8 +429,6 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-
-
 void thread_priority_donation(struct thread *thread, void *lock)
 {
   lock = (struct lock *)lock;
@@ -476,6 +480,7 @@ void thread_priority_chain_donation(struct lock* lock,int priority_donation)
 void
 thread_set_priority (int new_priority)
 {
+
   if(thread_current()->lock_own == 0)
   thread_current ()->priority = new_priority;
   thread_current ()->orginal_priority = new_priority;
@@ -490,6 +495,13 @@ thread_set_priority (int new_priority)
     3.check if t->own_lock == 0 if so restore the priority to orginal_priority
   */
 
+
+void
+thread_calculate_priority(void)
+{
+  
+
+}
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void)
@@ -501,30 +513,20 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice)
 {
-  running_thread()->nice_value = nice; 
+  thread_current()->nice_value = nice; 
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void)
 {
-  return running_thread()->nice_value;
+  return thread_current()->nice_value;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void)
 {
-//  if(timer_ticks() % (int64_t)100 == 0){
-//    fixed_point_t former_load_avg = fix_int(load_avg); /*get former load average*/
-//    former_load_avg = fix_unscale(former_load_avg, 100); /* divide by 100 */
-//    fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , former_load_avg),
-//                                         fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
-//    new_load_avg = fix_scale(new_load_avg, 100); /* multiple by 100*/ 
-//    load_avg = fix_round(new_load_avg); /*truncate to integer and store in global variables*/
-//   // load_avg = kernel_ticks;
-//  }
-//
   return load_avg;
 }
 
@@ -694,6 +696,7 @@ next_thread_to_run (void)
 }
 
 
+
 struct list_elem *
 pop_out_max_priority_thread(struct list *thread_list)
 {
@@ -810,7 +813,8 @@ schedule (void)
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
-
+  /*should be deleted afterwards*/
+  schedule_ticks++;
   if (cur != next)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
