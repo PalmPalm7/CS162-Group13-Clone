@@ -171,7 +171,7 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-void thread_calculate_priority(void); 
+void thread_calculate_priority(struct thread* t); 
 struct list_elem * pop_out_max_priority_thread(struct list *thread_list);
 struct thread *get_next_max_thread(struct list *thread_list); 
 void thread_priority_donation(struct thread *thread,void *lock);
