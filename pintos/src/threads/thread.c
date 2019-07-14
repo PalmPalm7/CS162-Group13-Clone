@@ -157,7 +157,6 @@ thread_tick (void)
 
   int ready_size = list_size(&ready_list);
 
-  // printf("%d\n", list_size(&ready_list));
 
   /* Update statistics. */
   if (t == idle_thread)
@@ -183,11 +182,13 @@ thread_tick (void)
       } else {
         curr_thread_adjustment = 0;
       }
-      
+        
       fixed_point_t new_load_avg = fix_add(fix_mul(fix_frac(59 , 60) , load_avg),
                                            fix_scale(fix_frac(1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
      load_avg = new_load_avg; /*truncate to integer and store in global variables*/
     }
+    if(timer_ticks() % 4 ==0)
+      thread_foreach(thread_calculate_priority,NULL);
   }
 
   /* Enforce preemption. */
@@ -461,7 +462,7 @@ thread_set_priority (int new_priority)
 {
   if (thread_mlfqs) {
     struct thread* t = running_thread ();
-    thread_calculate_priority (t);
+    thread_calculate_priority (t,NULL);
   } else {
     if(thread_current()->lock_own == 0) 
     thread_current ()->priority = new_priority;  
@@ -470,13 +471,15 @@ thread_set_priority (int new_priority)
   }
 }
 
+
 void  
-thread_calculate_priority (struct thread* t) 
+thread_calculate_priority (struct thread* t, void *aux UNUSED) 
 {
   fixed_point_t new_priority = fix_int (PRI_MAX);
   fixed_point_t recent_cpu = fix_unscale (t->recent_cpu, 4);
-  new_priority = fix_sub(new_priority, fix_unscale (fix_int(t->nice_value), 2));
-  t->priority  = fix_round(new_priority);
+  new_priority = fix_sub (new_priority, recent_cpu);
+  new_priority = fix_sub (new_priority, fix_scale (fix_int(t->nice_value), 2));
+  t->priority  = fix_round (new_priority);
  }
 
 /* In this function we need to implement 3 checks
@@ -616,10 +619,7 @@ init_thread (struct thread *t, const char *name, int priority)
     t->orginal_priority = priority; 
     t->lock_own = 0;
   } else {
-    fixed_point_t new_priority = fix_int(PRI_MAX);
-    fixed_point_t recent_cpu = fix_unscale(t->recent_cpu, 4);
-    new_priority = fix_sub(new_priority, fix_unscale(fix_int(t->nice_value), 2));
-    t->priority  = fix_round(new_priority);
+    thread_calculate_priority(t,NULL);
     
   }
   t->magic = THREAD_MAGIC;
@@ -663,7 +663,6 @@ next_thread_to_run (void)
   else if (thread_mlfqs){
       struct list_elem* next = list_max (&ready_list,less_priority,NULL);
       list_remove(next); 
-     // printf("priority %d",list_entry(next,struct thread, elem) ->priority); 
       return list_entry (next, struct thread, elem);
    }
    else {
@@ -752,7 +751,6 @@ thread_schedule_tail (struct thread *prev)
 
   /* Mark us as running. */
   cur->status = THREAD_RUNNING;
-
   /* Start new time slice. */
   thread_ticks = 0;
 
@@ -790,10 +788,8 @@ schedule (void)
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
 
-  if (thread_mlfqs && cur != idle_thread)
-    thread_set_priority(0);  
 
-   if (!thread_mlfqs) { 
+   if (thread_mlfqs) { 
     /*should be deleted afterwards*/  
     schedule_ticks++; 
   }
