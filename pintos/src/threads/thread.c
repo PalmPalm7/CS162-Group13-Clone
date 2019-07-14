@@ -456,10 +456,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
+  struct thread* t = thread_current();
+  fixed_point_t priority = fix_int(PRI_MAX);
+  fixed_point_t recent_cpu = fix_int(t->recent_cpu / 4);
+  priority = fix_sub(priority, fix_unscale(recent_cpu, 100));
+  priority = fix_sub(priority, fix_unscale(fix_int(t->nice_value), 2));
+  new_priority = fix_round(priority);
   thread_current ()->priority = new_priority;
   thread_yield();
-  if(thread_mlfqs){}
-    //fixed_point_t priority = PRIMAX
 }
 
 
@@ -554,14 +558,14 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice)
 {
-  running_thread()->nice_value = nice; 
+   thread_current ()->nice_value = nice; 
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void)
 {
-  return running_thread()->nice_value;
+  return thread_current ()->nice_value;
 }
 
 /* Returns 100 times the system load average. */
@@ -575,7 +579,7 @@ thread_get_load_avg (void)
 int
 thread_get_recent_cpu (void)
 {
-  return running_thread()->recent_cpu;
+  return thread_current ()->recent_cpu;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -689,6 +693,11 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
+bool less_priority(const struct list_elem *a,const struct list_elem *b,void *aux)
+{
+  return list_entry (a, struct thread, elem) ->priority < 
+         list_entry (b, struct thread, elem) ->priority ;
+}
 /* Chooses and returns the next thread to be scheduled.  Should
    return a thread from the run queue, unless the run queue is
    empty.  (If the running thread can continue running, then it
@@ -699,6 +708,11 @@ next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
     return idle_thread;
+  else if (thread_mlfqs){
+      struct list_elem* next = list_max (&ready_list,less_priority,NULL);
+      list_remove(next);  
+      return list_entry (next, struct thread, elem);
+   }
   else
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
