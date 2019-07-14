@@ -122,6 +122,8 @@ struct thread
     int lock_own;
 
     int orginal_priority;
+
+    struct lock *waiting_lock;
     
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -173,7 +175,7 @@ void priority_donation_selfcheck(struct thread *t);
 void priority_donation_release(struct thread *t,struct semaphore *sema);
 int thread_lock_list_empty(void);
 void thread_lock_list_add(struct list_elem *elem);
-
+void thread_priority_chain_donation(struct lock* lock,int priority_donation);
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);

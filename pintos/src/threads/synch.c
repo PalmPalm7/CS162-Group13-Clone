@@ -130,8 +130,10 @@ sema_up (struct semaphore *sema)
   if (!list_empty (&sema->waiters)) 
     thread_unblock (list_entry (pop_out_max_priority_thread (&sema->waiters),
                                 struct thread, elem));
+
   sema->value++;
   intr_set_level (old_level);
+  thread_yield();
 }
 
 
@@ -211,10 +213,12 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
   enum intr_level old_level;
   /* Check other thread which own the lock*/
-
   old_level = intr_disable ();
+  thread_current()->waiting_lock = lock;
   thread_foreach (thread_priority_donation,lock);
+  //thread_priority_donation(lock->holder,lock);
   sema_down (&lock->semaphore);
+  thread_current()->waiting_lock = NULL;
   lock->holder = thread_current ();
   thread_current()->priority_donation[thread_current()->lock_own].lock = lock;
   thread_current()->lock_own++;
@@ -284,82 +288,8 @@ lock_release (struct lock *lock)
     }
   }
   thread_current()->priority = max;
-  thread_yield();
   intr_set_level(old_level);
-
-
-
-  // if (!t)
-  // {
-
-  //   thread_yield ();
-  //   intr_set_level (old_level);
-  //   return;
-  // }
-
-  // for ( i = 0; i < thread_current()->lock_own; i++)
-  // {
-  //   if(thread_current()->locks[i] == lock)
-  //   {
-  //     int j = i;
-  //     for( j = i; j < thread_current()->lock_own-1; j++)
-  //     {
-  //       thread_current()->locks[j] = thread_current()->locks[j+1];
-  //     }  
-  //     thread_current()->lock_own--;
-  //     break;
-  //   }
-  // }
-  // for (i = 0; i < thread_current()->donation_count; i++)
-  // {
-  //   if (thread_current()->priority_donation[i].lock == lock && thread_current()->priority_donation[i].t == t)
-  //   {
-  //     int k = i;
-
-  //     for(k = i; k < thread_current()->donation_count - 1;k++){
-  //       thread_current()->priority_donation[k].lock = thread_current()->priority_donation[k+1].lock;
-  //       thread_current()->priority_donation[k].priority = thread_current()->priority_donation[k+1].priority;
-  //       thread_current()->priority_donation[k].t = thread_current()->priority_donation[k+1].t;
-  //     }
-  //     thread_current()->donation_count--;
-  //   }
-  // }
-  // int max = thread_current()->orginal_priority;
-  // for (i = 0; i < thread_current()->donation_count; i++)
-  // {
-  //   if(thread_current()->priority_donation[i].priority > max)
-  //   {
-  //     max = thread_current()->priority_donation[i].priority;
-  //   }
-  // }
-  // thread_current()->priority = max;
-  // thread_yield ();
-  // intr_set_level (old_level);
-  
-  // for( i = 0; i < thread_current()->lock_own; i++)
-  // {
-  //   if (thread_current()->priority_donation[i].lock == lock)
-  //   {
-  //     int j = i;
-  //     for(j = i; j < thread_current()->lock_own-1; j++)
-  //     {
-  //       thread_current()->priority_donation[j] =  thread_current()->priority_donation[j+1];
-  //     }
-  //     thread_current()->lock_own--;
-  //     break;
-  //   }
-  // }
-  // int max = -1;
-  // for( i = 0; i < thread_current()->lock_own; i++)
-  // {
-  //   if(thread_current()->priority_donation[i].priority > max)
-  //   max = thread_current()->priority_donation[i].priority;
-  // }
-  // if(max > thread_current()->priority)
-  // thread_current()->priority = max;
-
-  // if(thread_current()->lock_own == 0)
-  // thread_current()->priority = thread_current()->orginal_priority;
+  thread_yield();
 
 }
 
