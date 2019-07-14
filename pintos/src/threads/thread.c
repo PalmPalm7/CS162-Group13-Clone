@@ -37,6 +37,8 @@ static struct thread *initial_thread;
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
 
+fixed_point_t load_avg;
+
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame
   {
@@ -49,6 +51,8 @@ struct kernel_thread_frame
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
+
+static int enable_load_avg = 0;
 
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
@@ -98,6 +102,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -109,12 +114,12 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
-
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
+  load_avg = fix_int(0);
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -133,7 +138,10 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
+  if(timer_ticks() % (int64_t)100 == 0 && enable_load_avg){
+      load_avg = fix_add(fix_mul(fix_frac(59 , 60) , load_avg),
+                           fix_scale(fix_frac(1 , 60) , list_size(&ready_list))); /*calculate by formular*/
+    }
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -364,8 +372,8 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  enable_load_avg = 1;
+  return fix_round(fix_scale(load_avg,100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
