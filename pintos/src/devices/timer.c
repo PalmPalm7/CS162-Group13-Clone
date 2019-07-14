@@ -96,7 +96,7 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
-  ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
+  // ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
   intr_set_level(INTR_OFF);
   int64_t start = timer_ticks ();
   struct thread *t = thread_current();
@@ -108,8 +108,7 @@ timer_sleep (int64_t ticks)
       thread_block();
       intr_set_level(INTR_ON);
   }
-  // while (timer_elapsed (start) < ticks)
-  //   thread_yield();
+
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -196,29 +195,29 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-  if (list_empty (&sleep_list))
-    return;
-  struct list_elem *curr_elem = list_begin (&sleep_list);
-  struct list_elem *next_elem;
-   
-  while (curr_elem != list_end (&sleep_list))
-  {
-    struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
-    if (curr_thread->wake_time <= ticks)
-      {
-        // intr_set_level(INTR_OFF);
-        next_elem = list_next(curr_elem);
-        list_remove (curr_elem);
-        thread_unblock(curr_thread);
-        curr_elem = next_elem;
-        // intr_set_level(INTR_ON);
-        // thread_yield();
-      }
-     else
-     {
-        thread_tick ();
-        return;
-     }
+  if (!list_empty (&sleep_list)) {
+    struct list_elem *curr_elem = list_begin (&sleep_list);
+    struct list_elem *next_elem;
+     
+    while (curr_elem != list_end (&sleep_list))
+    {
+      struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
+      if (curr_thread->wake_time <= ticks)
+        {
+          // intr_set_level(INTR_OFF);
+          next_elem = list_next(curr_elem);
+          list_remove (curr_elem);
+          thread_unblock(curr_thread);
+          curr_elem = next_elem;
+          // intr_set_level(INTR_ON);
+          // thread_yield();
+        }
+       else
+       {
+          thread_tick ();
+          return;
+       }
+    }
   }
   thread_tick();
 }
