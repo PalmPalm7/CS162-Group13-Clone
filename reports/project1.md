@@ -1,24 +1,27 @@
 # Final Report for Project 1: Threads
 ===================================
 
+There was a significant misunderstanding when it came to what needed to be implemented for the efficient alarm clock prior to the design review.  The original belief was simply that *timer_sleep()* needed to be modified to change a thread's status to blocked if it wasn't already and to unblock it after a certain amount of time had passed without returning from the function until after the thread has been unblocked.  After the design review, the plan for the efficient alarm clock added the use of a list of sleeping threads that would be added to in *timer_sleep()* and taken away from in *timer_interrupt()* according to the value of a new member of the thread struct, *wake_time*.  When added to the list of sleeping threads, the current thread would avoid being placed on the *ready_list* and would only be on the *all_list* and *sleep_list* while it is sleeping.  Meanwhile, *timer_interrupt()* would be repeatedly called and move any threads that had a *wake_time* in the past off of the *sleep_list* and back onto the *ready_list* unblocked.
 
-At the design phrases, we are not so familiar with the thread system in pintos, thus we think it is necessary to modify lots of functions that related with thread in mlfqs task, and we need manually pull the thread with highest priority. After the pintos revision, we have deeper understanding towards the pintos system, thus there are not so many function modified or added.
+Originally, the plan was to have the default scheduler use a list of all of the threads attempting to acquire a lock and to use the *sema_up* and *sema_down* threads to manipulate the priorities of threads as they acquired locks.  After the design review, the decision was made to instead create additional members of the thread struct, including an entirely new priority donation struct, to keep track of the various donations.  Additionally, the default implementations of *sema_up* and *sema_down* were mostly kept intact and new functions were added to keep track of the synchronization between different threads as they interact with locks.
 
-here is the actual added or modified function:
+Prior to the design review, we were not as familiar with the thread system in pintos as we should have been. In order to implement the MLFQS, it was necessary to modify many more functions than expected.  
+
+The following functions were all modified or added to fully implement the MLFQS:
 ```
-struct thread //add recent_cpu and nice_value
-static struct thread *next_thread_to_run(void); //enable mlfqs
-void schedule(); //enable mlfqs 
-void thread_ticks();
-int thread_get_nice(void)  // get the thead`s nice value
-void thread_set_nice(int new_nice)// set the thread`s nice value
-int thread_get_recent_cpu(void) //get recent cpu time in moving average
-int thread_get_load_avg(void) //get loaded average
+struct thread //Add recent_cpu and nice_value members
+static struct thread *next_thread_to_run(void); //Choose the thread with the highest calculated priority to run
+void schedule(); //Enable MLFQS functionality
+void thread_ticks(); //Update the load average, recent cpu, and priority at the appropriate intervals
+int thread_get_nice(void)  //Get the thead`s nice value
+void thread_set_nice(int new_nice) //Set the thread`s nice value
+int thread_get_recent_cpu(void) //Get recent cpu time
+int thread_get_load_avg(void) //Get load average
 
 
-fixed_point_t load_avg //hold the load average for calculation
-void update_all_recent_cpu(struct thread* t,void *aux UNUSED) //used to update all recent cpu
-void thread_calculate_priority(struct thread* t,void *aux UNUSED) //used to update all prioirty
+fixed_point_t load_avg //Store the load average 
+void update_all_recent_cpu(struct thread* t,void *aux UNUSED) //Update all threads' recent cpu usage
+void thread_calculate_priority(struct thread* t,void *aux UNUSED) //Update all threads' prioirty
 
 ```
-
+For the majority of the project, Josh handled the efficient alarm clock, integration of the code between the three different tasks, and editing the design doc and final report.  Zuxin worked on implementing the MLFQS scheduler and all of the associated tasks such as calculating the load average and recent cpu usage.  Handi and Gary focused on creating the default scheduler, lock acquisition/release, and priority donation when multiple threads attempt to acquire the same lock.
