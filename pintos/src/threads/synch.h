@@ -42,7 +42,7 @@ void cond_init (struct condition *);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
-
+struct list_elem* list_max_thread(struct list *list);
 /* Optimization barrier.
 
    The compiler will not reorder operations across an

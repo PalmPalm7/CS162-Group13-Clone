@@ -661,6 +661,7 @@ bool less_priority(const struct list_elem *a,const struct list_elem *b,void *aux
    empty.  (If the running thread can continue running, then it
    will be in the run queue.)  If the run queue is empty, return
    idle_thread. */
+
 static struct thread *
 next_thread_to_run (void)
 {
