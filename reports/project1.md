@@ -28,8 +28,9 @@ Among them the four calculation, which is `thread_get_nice`, `thread_set_nice`,`
 
 
 Josh handled the efficient alarm clock, integration of the code between the three different tasks, and polishing the design doc and final report. 
-Zuxin worked on implementing the MLFQS scheduler, including calculate load average, recent cpu and thread priority， and filling the document with part related with MLFQS.  
-Handi and Gary focused on creating the default scheduler, lock acquisition/release, and priority donation when multiple threads attempt to acquire the same lock.
+Zuxin worked on implementing the MLFQS scheduler, including calculate load average, recent cpu and thread priority， and filling the documents with part related with MLFQS.  
+Handi and Gary focused on creating the default scheduler, lock acquisition/release, and priority donation when multiple threads attempt to acquire the same lock, designing the scheduler and priority donation part, then filled them into the documents.
 
 The group members have all put a great effort in finishing this projecet. For example, implementing their part, Josh and Gary often stays up at night to 3A.M., while other members sacrifice their weekend for the project. We did put a lot of work on the project, this may be something that went well for the project.
-We think one of the major part we need to improve is the skill for code review. At first, Zuxin have a lot of missed understand about how the schedule work, therefore he did a poor design on the scheduling.
+We think one of the major part we need to improve is the skill for code review. At first, Zuxin have a lot of missed understand about how the schedule work. He have no idea about how threads are removed from the `ready_list`,therefore he did a poor design on the scheduling, which causes a lot of problems when he implemented his part.
+Besides, since some of our member are not so familiar with git, when we working in our part simutaneously, the code was pushed one after one, causing a lot of confilict. It was not before the TA noticed us that we started to use branch to finish our part seperately, then merge them afterwards.
