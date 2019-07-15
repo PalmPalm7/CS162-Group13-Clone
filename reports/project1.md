@@ -5,7 +5,7 @@ There was a significant misunderstanding when it came to what needed to be imple
 
 Originally, the plan was to have the default scheduler use a list of all of the threads attempting to acquire a lock and to use the *sema_up* and *sema_down* threads to manipulate the priorities of threads as they acquired locks.  After the design review, the decision was made to instead create additional members of the thread struct, including an entirely new priority donation struct, to keep track of the various donations.  Additionally, the default implementations of *sema_up* and *sema_down* were mostly kept intact and new functions were added to keep track of the synchronization between different threads as they interact with locks.
 
-Prior to the design review, we were not as familiar with the thread system in pintos as we should have been. In order to implement the MLFQS, it was necessary to modify many more functions than expected.  
+Prior to the design review, we were not as familiar with the thread system in pintos as we should have been. In order to implement the MLFQS, it was necessary to add a lot of callback function for updating each thread at a typical timing, and it is useless to change the other thread manipulation.  
 
 The following functions were all modified or added to fully implement the MLFQS:
 ```
@@ -24,4 +24,12 @@ void update_all_recent_cpu(struct thread* t,void *aux UNUSED) //Update all threa
 void thread_calculate_priority(struct thread* t,void *aux UNUSED) //Update all threads' prioirty
 
 ```
-For the majority of the project, Josh handled the efficient alarm clock, integration of the code between the three different tasks, and editing the design doc and final report.  Zuxin worked on implementing the MLFQS scheduler and all of the associated tasks such as calculating the load average and recent cpu usage.  Handi and Gary focused on creating the default scheduler, lock acquisition/release, and priority donation when multiple threads attempt to acquire the same lock.
+Among them the four calculation, which is `thread_get_nice`, `thread_set_nice`,`thread_get_recent_cpu`and`thread_get_load_avg` are implemented as the design. But since the design phase do not have much time, and code review consumes a lot of effort, we considered little about the possible unintended situations.For example, when implementing load average calculation, the first design was to store  `load_average` as an integer, which is 100 times real value, rounded to the nearest integer. That means every time we do the calculation, we need to cast it into fixed point real, then unscale by 100, the scale by 100 and round to integer after the calculation is done. We did not foreseen the expensive calculation would crash the timer and leads to a series of failure in the designing phrase, so deugging this case have consumed a heavy waste on time and effort.
+
+
+Josh handled the efficient alarm clock, integration of the code between the three different tasks, and polishing the design doc and final report. 
+Zuxin worked on implementing the MLFQS scheduler, including calculate load average, recent cpu and thread priority， and filling the document with part related with MLFQS.  
+Handi and Gary focused on creating the default scheduler, lock acquisition/release, and priority donation when multiple threads attempt to acquire the same lock.
+
+The group members have all put a great effort in finishing this projecet. For example, implementing their part, Josh and Gary often stays up at night to 3A.M., while other members sacrifice their weekend for the project. We did put a lot of work on the project, this may be something that went well for the project.
+We think one of the major part we need to improve is the skill for code review. At first, Zuxin have a lot of missed understand about how the schedule work, therefore he did a poor design on the scheduling.
