@@ -413,51 +413,60 @@ thread_foreach (thread_action_func *func, void *aux)
       struct thread *t = list_entry (e, struct thread, allelem);
       func (t, aux);
     }
+
 }
 
-void thread_priority_donation(struct thread *thread, void *lock)  
-{ 
-  lock = (struct lock *)lock; 
-  int i = 0;  
-  for(i = 0; i < thread->lock_own; i++) 
-  { 
-    if(thread->priority_donation[i].lock == lock) 
-    { 
-      if(thread->priority  < thread_current()->priority)  
-      { 
-        thread->priority_donation[i].priority = thread_current()->priority; 
-        thread->priority = thread_current()->priority;  
-      } 
-    } 
-  } 
-  thread_priority_chain_donation(lock,thread_current()->priority);  
-  return; 
+
+
+void thread_priority_donation(struct thread *thread, void *lock)
+{
+  lock = (struct lock *)lock;
+  enum intr_level old_level;
+  int i = 0;
+  for(i = 0; i < thread->lock_own; i++)
+  {
+    if(thread->priority_donation[i].lock == lock)
+    {
+      if(thread->priority  < thread_current()->priority)
+      {
+        thread->priority_donation[i].priority = thread_current()->priority;
+        thread->priority = thread_current()->priority;
+        old_level = intr_disable();
+        thread_priority_chain_donation(lock,thread_current()->priority);
+        intr_set_level(old_level);
+      }
+    }
+  }
+  return;
 }
 
-/* Recursively donate the value*/ 
-void thread_priority_chain_donation(struct lock* lock,int priority_donation)  
-{ 
-  if(!lock) 
-    return; 
-  if(lock->holder == NULL)  
-    return; 
-  struct thread *t; 
-  t = lock->holder; 
-  int i = 0;  
-  for(i = 0; i < t->lock_own; i++)  
-  { 
-    if(t->priority_donation[i].lock == lock)  
-    { 
-      if(priority_donation > t->priority) 
-      { 
-        t->priority = priority_donation;  
-      } 
-    }   
-  } 
 
-   thread_priority_chain_donation(lock->holder->waiting_lock,priority_donation);  
+/* Recursively donate the value*/
+void thread_priority_chain_donation(struct lock* lock,int priority_donation)
+{
+  if(!lock)
+    return;
+  if(lock->holder == NULL)
+    return;
+  struct thread *t;
+  t = lock->holder;
+  int i = 0;
+  for(i = 0; i < t->lock_own; i++)
+  {
+    if(t->priority_donation[i].lock == lock)
+    
+    {
+      if(priority_donation > t->priority)
+      {
+        t->priority = priority_donation;
+        t->priority_donation[i].priority = priority_donation;
+
+      }
+    }  
+  }
+  
+  thread_priority_chain_donation(lock->holder->waiting_lock,priority_donation);
 }
-
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
@@ -536,6 +545,7 @@ int
 thread_get_recent_cpu (void)
 {
   return fix_round (fix_scale (thread_current ()->recent_cpu, 100));
+  
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
