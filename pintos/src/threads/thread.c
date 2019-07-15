@@ -290,7 +290,7 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
   /* If the thread create a thread with bigger priority yield the CPU */
   /* Newly added*/
-  if(thread_current()->priority < t->priority)
+  
   thread_yield();
 
   return tid;
@@ -421,6 +421,7 @@ thread_foreach (thread_action_func *func, void *aux)
       struct thread *t = list_entry (e, struct thread, allelem);
       func (t, aux);
     }
+
 }
 
 
@@ -428,6 +429,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void thread_priority_donation(struct thread *thread, void *lock)
 {
   lock = (struct lock *)lock;
+  enum intr_level old_level;
   int i = 0;
   for(i = 0; i < thread->lock_own; i++)
   {
@@ -437,10 +439,12 @@ void thread_priority_donation(struct thread *thread, void *lock)
       {
         thread->priority_donation[i].priority = thread_current()->priority;
         thread->priority = thread_current()->priority;
+        old_level = intr_disable();
+        thread_priority_chain_donation(lock,thread_current()->priority);
+        intr_set_level(old_level);
       }
     }
   }
-  thread_priority_chain_donation(lock,thread_current()->priority);
   return;
 }
 
@@ -458,18 +462,18 @@ void thread_priority_chain_donation(struct lock* lock,int priority_donation)
   for(i = 0; i < t->lock_own; i++)
   {
     if(t->priority_donation[i].lock == lock)
+    
     {
       if(priority_donation > t->priority)
       {
         t->priority = priority_donation;
+        t->priority_donation[i].priority = priority_donation;
+
       }
     }  
   }
   
   thread_priority_chain_donation(lock->holder->waiting_lock,priority_donation);
-  
-
-
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
