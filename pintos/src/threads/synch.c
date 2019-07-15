@@ -123,6 +123,7 @@ sema_up (struct semaphore *sema)
     thread_unblock (list_entry (pop_out_max_priority_thread (&sema->waiters),
                                 struct thread, elem));
   sema->value++;
+  thread_yield();
   intr_set_level (old_level);
 }
 
