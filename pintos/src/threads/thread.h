@@ -14,12 +14,12 @@
 #include "threads/synch.h"
 #include "devices/timer.h"
 
-struct priority_donation{   
-  struct lock *lock;   
-  int priority;     
-};
-
-
+/* Struct to record every existing priority donation*/
+struct priority_donation
+  {   
+    struct lock *lock;   
+    int priority;     
+  };
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -172,22 +172,18 @@ int thread_get_priority (void);
 void thread_set_priority (int);
 void thread_calculate_priority (struct thread* t, void *aux); 
 struct list_elem * pop_out_max_priority_thread (struct list *thread_list);
-struct thread *get_next_max_thread (struct list *thread_list); 
-void thread_priority_donation (struct thread *thread,void *lock);
 
-int priority_donation_check_and_set (struct thread *t, struct semaphore *sema,int current_priority);
-void priority_donation_selfcheck (struct thread *t);
+void thread_check_donate_priority(struct thread *thread, void *lock);
+void thread_do_donate_priority(struct lock* lock,int priority_donation);
+void thread_undo_donate_priority (struct thread *thread, struct lock *lock);
+
 void priority_donation_release (struct thread *t,struct semaphore *sema);
-int thread_lock_list_empty (void);
-void thread_lock_list_add (struct list_elem *elem);
 
-void thread_priority_chain_donation (struct lock* lock,int priority_donation);
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-struct list* return_lock_list (void);
-void thread_sema_foreach (thread_action_func *func,void *aux);
+
 
 
 #endif /* threads/thread.h */
