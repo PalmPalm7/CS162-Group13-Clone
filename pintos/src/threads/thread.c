@@ -429,11 +429,7 @@ void thread_priority_donation(struct thread *thread, void *lock)
     {
       if(thread->priority  < thread_current()->priority)
       {
-        thread->priority_donation[i].priority = thread_current()->priority;
-        thread->priority = thread_current()->priority;
-        old_level = intr_disable();
         thread_priority_chain_donation(lock,thread_current()->priority);
-        intr_set_level(old_level);
       }
     }
   }
@@ -460,7 +456,6 @@ void thread_priority_chain_donation(struct lock* lock,int priority_donation)
       {
         t->priority = priority_donation;
         t->priority_donation[i].priority = priority_donation;
-
       }
     }  
   }

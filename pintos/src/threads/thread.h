@@ -126,7 +126,6 @@ struct thread
 
     struct priority_donation priority_donation[MAX_DONATION_NUM]; 
 
-    struct lock *locks[MAX_DONATION_NUM];
 
     struct lock *waiting_lock;
 
