@@ -28,6 +28,8 @@ void thread_calculate_priority(struct thread* t,void *aux UNUSED) //Update all t
 Among them the four calculation, which is `thread_get_nice`, `thread_set_nice`,`thread_get_recent_cpu`and`thread_get_load_avg` are implemented as the design. But since the design phase do not have much time, and code review consumes a lot of effort, we considered little about the possible unintended situations.For example, when implementing load average calculation, the first design was to store  `load_average` as an integer, which is 100 times real value, rounded to the nearest integer. That means every time we do the calculation, we need to cast it into fixed point real, then unscale by 100, the scale by 100 and round to integer after the calculation is done. We did not foreseen the expensive calculation would crash the timer and leads to a series of failure in the designing phrase, so deugging this case have consumed a heavy waste on time and effort.
 
 
+
+
 Josh handled the efficient alarm clock, integration of the code between the three different tasks, and polishing the design doc and final report. 
 Zuxin worked on implementing the MLFQS scheduler, including calculate load average, recent cpu and thread priority， and filling the documents with part related with MLFQS.  
 Handi and Gary focused on creating the default scheduler, lock acquisition/release, and priority donation when multiple threads attempt to acquire the same lock, designing the scheduler and priority donation part, then filled them into the documents.
@@ -48,12 +50,22 @@ There is a lot of changes between the design doc and the real code.
 6. We use `thread_foreach` to check all the thread in the `all_list`  to find the owner a of lock and if we find the owner of a lock we do priority donation  if we can't do nothing which is different comparing we thought in design doc.We thought we could create a new static list `lock_list` to record the thread which own a lock and every time we check the owner of lock we just need to go through the `lock_list`.However we couldn't find out the reason why the `lock_list` couldn't be initialize correctly and every time i loop the `lock_list` it always can't jump out of the loop. So we have to use the existing threads.
 7. The member variable `own_lock ` and `orginal_priority` was designed to restore the the original priority.Now we reuse them but with different purposes.`lock_own` is to denote the number of priority donation record stored in `priority_donation[MAX_DONATION_NUM]` and `orginal_priority` is to store the priority when `thread_set_priority` is called but the current thread owns locks.
 8. We add the pointer `waiting_lock` to denote the lock that a thread is waiting for which  is not included in doc.We add  the waiting lock to handle the situation like the "donation chain".
+9. In the priority donation function `void thread_priority_donation(struct thread *thread, void *lock)` we did not use our method in the design doc -- setting its own priority level by using the newly defined structure `struct priority_donation` inside of our pre-defined thread structure. Therefore, we added data structures like `struct priority_donation priority_donation[MAX_DONATION_NUM]; ` to innerly keep track of the priority level. Furthermore, we implemented the priority donation chain function for recursive donations. <br /> For exmaple, for lock 1, 2 and 3 along with thread A B C and D which have lowest to highest priority respectively. We have thread A with lock 1, thread B with lock 2, thread C with lock 3, thread D without lock. <br />
+![](./lock_donate_chain.png)
+ In such case where a chained donation is involved, we will use the `void thread_priority_chain_donation(struct lock* lock,int priority_donation)` function to recursively donate the level. Another improvemennt is the implementation of `struct list_elem* list_max_thread(struct list *list)`, in which we loop through all the list element to find the thread with the highest priority. 
+
+
+
+
 
 Reflection and improvment
 
 The scheduler works fine though its time complexity is O(n) but for the limited thread in pintos ,it will not cost much to check all the thread in `ready_list`.
 
 We don't have to go through all the threads recorded in `all_list`  to find the owner of lock, actually we could create a new list `lock_list` to record the owner of the list which may save a lot time, especially if there is a lot of thread in system but few of them owns a lock.
+
+
+
 
 
 
