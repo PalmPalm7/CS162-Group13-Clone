@@ -96,16 +96,14 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
-  // ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
+  ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
   intr_set_level(INTR_OFF);
   int64_t start = timer_ticks ();
   struct thread *t = thread_current();
   if (ticks > 0) {
-      t->wake_time = start + ticks;                  /*Set the time that the thread must awaken at.       */
-      // t->status = THREAD_BLOCKED;                   /* Set the thread to be blocked as an extra precaution */
+      t->wake_time = start + ticks;             /* Set the time that the thread must awaken at. */
       list_insert_ordered (&sleep_list, &t->elem, wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
-      // pop_out_max_priority_thread(&ready_list);
-      thread_block();
+      thread_block();                           /* Ensure the thread doesn't try to run by blocking it */
       intr_set_level(INTR_ON);
   }
 
@@ -174,7 +172,7 @@ timer_ndelay (int64_t ns)
   real_time_delay (ns, 1000 * 1000 * 1000);
 }
 
-/* Returns True if thread_1 has an earlier wake time than thread_2 and false otherwise. */
+/* Returns true if thread_1 has an earlier wake time than thread_2 and false otherwise. */
 static bool 
 wake_time_comp (const struct list_elem *x, const struct list_elem *y, void *aux) 
 {
@@ -195,22 +193,19 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-  if (!list_empty (&sleep_list)) {
+  if (!list_empty (&sleep_list)) {                /* Ensure that there is at least 1 sleeping thread */
     struct list_elem *curr_elem = list_begin (&sleep_list);
     struct list_elem *next_elem;
      
-    while (curr_elem != list_end (&sleep_list))
+    while (curr_elem != list_end (&sleep_list))   /* Cycle through the sleep_list */
     {
       struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
-      if (curr_thread->wake_time <= ticks)
+      if (curr_thread->wake_time <= ticks)        /* Awaken any threads whose wake_time is in the past */
         {
-          // intr_set_level(INTR_OFF);
           next_elem = list_next(curr_elem);
           list_remove (curr_elem);
           thread_unblock(curr_thread);
           curr_elem = next_elem;
-          // intr_set_level(INTR_ON);
-          // thread_yield();
         }
        else
        {
