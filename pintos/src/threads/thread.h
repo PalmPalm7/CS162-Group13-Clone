@@ -1,27 +1,29 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
+#define MAX_DONATION_NUM 20
+
 
 
 
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "threads/synch.h"
 #include "threads/fixed-point.h"
 #include "threads/synch.h"
+#include "devices/timer.h"
 
-struct prioriy_donation_unit
-  {
-    struct semahpore *sema;
-    int priority_donation;
-  };
-
+/* Struct to record every existing priority donation*/
 struct priority_donation
-  {
-    struct prioriy_donation_unit priority_donation_slots[10];
-    int count;
+  {   
+    struct lock *lock;   
+    int priority;     
   };
 
+/* List of processes in THREAD_READY state, that is, processes
+   that are ready to run but not actually running. */
+static struct list ready_list;
 
 
 /* States in a thread's life cycle. */
@@ -44,13 +46,11 @@ typedef int tid_t;
 #define PRI_MAX 63                      /* Highest priority. */
 
 /* A kernel thread or user process.
-
    Each thread structure is stored in its own 4 kB page.  The
    thread structure itself sits at the very bottom of the page
    (at offset 0).  The rest of the page is reserved for the
    thread's kernel stack, which grows downward from the top of
    the page (at offset 4 kB).  Here's an illustration:
-
         4 kB +---------------------------------+
              |          kernel stack           |
              |                |                |
@@ -72,22 +72,18 @@ typedef int tid_t;
              |               name              |
              |              status             |
         0 kB +---------------------------------+
-
    The upshot of this is twofold:
-
       1. First, `struct thread' must not be allowed to grow too
          big.  If it does, then there will not be enough room for
          the kernel stack.  Our base `struct thread' is only a
          few bytes in size.  It probably should stay well under 1
          kB.
-
       2. Second, kernel stacks must not be allowed to grow too
          large.  If a stack overflows, it will corrupt the thread
          state.  Thus, kernel functions should not allocate large
          structures or arrays as non-static local variables.  Use
          dynamic allocation with malloc() or palloc_get_page()
          instead.
-
    The first symptom of either of these problems will probably be
    an assertion failure in thread_current(), which checks that
    the `magic' member of the running thread's `struct thread' is
@@ -114,16 +110,24 @@ struct thread
     int nice_value;
     
     /*recent cpu for the thread, the struct should store 100 times real value*/
-    int recent_cpu;
+    fixed_point_t recent_cpu;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+
+    // struct list_elem alarm_elem;           Added to track semaphore 
+
+    
+    // struct list_elem sema_elem;          /* Added to track semaphore */
     
     int orginal_priority;
     
     int lock_own;
 
-    struct priority_donation donation;
+    struct priority_donation priority_donation[MAX_DONATION_NUM]; 
+
+
+    struct lock *waiting_lock;
 
 
 
@@ -166,12 +170,20 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-void thread_priority_donation (struct thread *t,int new_priority);
-void pop_out_max_priority_thread(struct list *thread_list,struct thread *max);
+void thread_calculate_priority (struct thread* t, void *aux); 
+struct list_elem * pop_out_max_priority_thread (struct list *thread_list);
+
+void thread_check_donate_priority(struct thread *thread, void *lock);
+void thread_do_donate_priority(struct lock* lock,int priority_donation);
+void thread_undo_donate_priority (struct thread *thread, struct lock *lock);
+
+void priority_donation_release (struct thread *t,struct semaphore *sema);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+
 
 #endif /* threads/thread.h */
