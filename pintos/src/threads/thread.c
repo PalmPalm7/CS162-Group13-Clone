@@ -1,4 +1,4 @@
-#include "threads/thread.h"
+#include "threads/thread.h"x
 #include <debug.h>
 #include <stddef.h>
 #include <random.h>
@@ -268,7 +268,6 @@ thread_create (const char *name, int priority,
     { 
      t->priority_donation[i].lock = NULL; 
      t->priority_donation[i].priority = -1;   
-
      }  
   }
 

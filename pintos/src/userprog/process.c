@@ -19,9 +19,20 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+#define MAX_ARGUMENT 40 //max number of argumets
+#define ARGUMENT_MAX_LENGH 50//max length of an argument
+
 static struct semaphore temporary;
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+
+void push_argument(char argument[][],int **esp);
+
+void push_argument(char argument[][],int **esp)
+{
+  return;
+}
+
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -225,6 +236,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL)
     goto done;
   process_activate ();
+  /* change the filename here*/
+  char argument[MAX_ARGUMENT][ARGUMENT_MAX_LENGH];
+  int argument_count = 0;
+  
+
+
 
   /* Open executable file. */
   file = filesys_open (file_name);
@@ -305,10 +322,13 @@ load (const char *file_name, void (**eip) (void), void **esp)
           break;
         }
     }
-
+  
+  
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
+  /* Push the argument and set the esp pointing to the top of stack  */
+  push_argument(argument[MAX_ARGUMENT][ARGUMENT_MAX_LENGH],esp);
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
