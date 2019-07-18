@@ -4,8 +4,8 @@ Design Document for Project 2: User Programs
 ## Group Members
 
 * Josh Alexander <josh.alexander1315@berkeley.edu>
-* FirstName LastName <email@domain.example>
-* FirstName LastName <email@domain.example>
+* Handi Xie <hxie14@berkeley.edu>
+* Wenzheng Guo <guowz19@berkeley.edu>
 * Zuxin Li <lizx2019@berkeley.edu>
 ```
 tid_t process_execute(const char *file_name) //enable argument parsing
