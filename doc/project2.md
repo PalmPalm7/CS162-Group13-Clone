@@ -3,7 +3,7 @@ Design Document for Project 2: User Programs
 
 ## Group Members
 
-* FirstName LastName <email@domain.example>
+* Josh Alexander <josh.alexander1315@berkeley.edu>
 * FirstName LastName <email@domain.example>
 * FirstName LastName <email@domain.example>
 * Zuxin Li <lizx2019@berkeley.edu>
@@ -32,16 +32,16 @@ void close(int fd)
 
 ## Task 1: Argument Passing
 ### 1.Data structures and functions 
-Add the two macros to restrict the maximum number of comand-line arguments could be passed into a program and  the maximum length of an argument.
+Two macros will be added to restrict the maximum number of comand-line arguments could be passed into a program and the maximum length of an argument.
 
 ```
 #define MAX_ARGUMENT 40 //max number of argumets
 #define ARGUMENT_MAX_LENGH 50//max length of an argument
 ```
-add the local variable `argument[MAX_ARGUMENT][ARGUMENT_MAX_LENGH]` to store parsed argument and file name
+A local variable `argument[MAX_ARGUMENT][ARGUMENT_MAX_LENGH]` will store the parsed argument and the file name.
 
 ### 2.Algorithms 
-Parsing the argumet does not rely on I/O redirection or background processes. The argument is split into `*file_name` in the function `load` (in process.c) along single or continuous spaces. It will push the arguments on the stack when the function `setup_stack` returns and move the stack pointer to the top of the stack just above the fake return address. It will be implemented by calling the function ` push_argument` right after calling `setup_stack`.
+Parsing the argument does not rely on I/O redirection or background processes. The argument is split into `*file_name` in the function `load` (in process.c) along single or continuous spaces. It will push the arguments on the stack when the function `setup_stack` returns and move the stack pointer to the top of the stack just above the fake return address. It will be implemented by calling the function ` push_argument` right after calling `setup_stack`.
 
 ```
   /* Set up stack. */
@@ -62,7 +62,7 @@ Our design is  that we don't change the function and we just add some comments t
 
 
 
-##Task 2 Process control syscalls
+## Task 2: Process control syscalls
 
 ### Data structures
 
@@ -105,13 +105,13 @@ in `halt` function, we can just call `shutdown_power_off()`
 in `exit` function, first we check the resources occupied by process, then release all of the resources(releasing locks, free memory, closing file for the process). second, check if there is any tid on the wait_list that is identical to child_pid or parent_pid, if there is, set the return value, decrement the reference count with lock to synchronize.If ref_cnt becomes 0, then remove the wait_status ,otherwise call `sema_down` and remove wait_status. 
 
 
-in `wait` function, first we check the waitlist with parent_pid and child_pid. If there is no eligible wait_status(i.e. no wait_status have the same pair of parent_pid and child_pid), then return -1 instantly. If there is, then call `sema_down` to the semaphore and get wait_status`s `return_val`, then use this as a return value.
+in `wait` function, first we check the waitlist with parent_pid and child_pid. If there is no eligible wait_status(i.e. no wait_status have the same pair of parent_pid and child_pid), then return -1 instantly. If there is, then call `sema_down` to the semaphore and get wait_status's `return_val`, then use this as a return value.
 
 in `exec` function, we just call `process_execute` function to start the new process.
 in `process_execute` function ,we will create a new wait_status for the child process and parent process, so as to enable `wait`
 
 
-## Synchronization ##
+### Synchronization 
 In `practice` and `halt` function, there is no syncrhonization issues, so we do not need to think about synchronization.
 
 In `exit`,`wait` and `exit`, 
@@ -120,14 +120,14 @@ In `exit`,`wait` and `exit`,
 ### Rationale
 
 #### Alternative design 1
-modify `struct thread`, add `child_pid` list and `parent_pid` for each process, and two semaphore to identify if a process is terminated, or there is a child terminated. whenever there is a `exec`, we add a `child_pid` to the parent`s list. Whenever there is a `wait`, we check the `child_pid` list to do the sanity check, and `sema_down` for specific child( or any child). 
+modify `struct thread`, add `child_pid` list and `parent_pid` for each process, and two semaphore to identify if a process is terminated, or there is a child terminated. whenever there is a `exec`, we add a `child_pid` to the parent's list. Whenever there is a `wait`, we check the `child_pid` list to do the sanity check, and `sema_down` for specific child( or any child). 
 
 
 
 
 
 ## Task 3: File Operation Syscalls
-###Data Structures
+### Data Structures
 struct files that contains
 The file descriptor, file name, lock, flag, reader count, list elem
 
@@ -141,68 +141,55 @@ Struct files {
 }
 ```
 
+### Algorithms
 
-→ Implement a list to keep track of all the e.g. struct list filelist in process.c ?, collabing with Task 2
-→ Tracking the file descriptor with a global variable int file_fd
-→ For the sake of the project I suggest use a lock for every filesystem syscall
-→ Lock is needed for every file, maybe implemented inside syscall_init (void) ?
-A flag if a file is being created to prevent any issues with trying to perform operations on a file before it finishes being created.  Maybe turn interrupts off instead?
-
-###Algorithms
-“No internal synchronization. 
-Concurrent accesses will interfere with one another. You should use synchronization to ensure that only one process at a time is executing file system code” (so not just writing, seek, tell, filesize too?) 
-
-“When a file is removed (deleted), its blocks are not deallocated until all processes have closed all file descriptors pointing to it. Therefore, a deleted file may still be accessible by processes that have it open.”
-→ A list for all the file used in current process as well as the number of files in that process.
-
-####create
+#### create
 First, the file name will be checked to make sure it has no more than 14 characters. Next, `filesys_create (const char *name, off_t initial_size)` from filesys.c will be invoked to create the file. If the call succeeds, the filename will be added to the file list. While a file is being created, a flag will be upped to prevent any issues with trying to perform operations on a file before it finishes being created. If no file is currently being created, this flag will be set to 0.
 
-####remove
+#### remove
 This function will simple invoke `filesys_remove (const char *name)` from filesys.c to remove a file. If the file has been removed, add the filename will be removed from the filelist.
 
-####open
+#### open
 This function will call `filesys_open (const char *name)` on a given file.  This function will fail if no file named NAME exists, or if an internal memory allocation fails. If this occurs, it will return the value -1.
 
-####filesize
+#### filesize
 If the file exists, this function will call `file_length (struct file *file)` from file.c which returns the size of the file in bytes.
 
-####read
+#### read
 If the file exists and the amount to be read is less than the filesize, the function `file_read (struct file *file, void *buffer, off_t size)` from file.c to read from a file into a buffer. Right before calling `file_read`, this function will call `file_deny_write` from file.c to ensure it is not edited during the read. After finishing the read, this function will check if there are other readers and call `file_allow_write` from file.c if there are none.
 
-####write
+#### write
 Write will behave very similar to read, except it will always allow other writers to edit the file once it has finished writing.  First, this function will invoke `file_write (struct file *file, void *buffer, off_t size)`  from file.c to write from a buffer into a file. This function will assert the amount to be written is less than the file size and the filename is on the file list. It will also call `file_deny_write` from file.c before writing and file_allow_write from file.c after it finishes.
 
-####tell
+#### tell
 This will invoke `file_tell (struct file *file)` from file.c and return the current position in the given file to the caller.
 
-####close
+#### close
 Close will first assert that the given filename is on the file list.  It will then remove the file from the file list and call `file_close` from file.c to close the file.
 
-##Synchronization
+### Synchronization
 The file lock will make sure that multiple operations do not try to modify the same file at the same time, with the exception of multiple files attempting to read the same file.  When first attempting to read or write to a file, `file_deny_write` will be immediately called to ensure that it can not have any additional writers until the action completes at which point `file_allow_write` will be called if the `reader_count` for the file is 0.  The `reader_count` for each file will help make sure that all readers have finished with a file before anything can be written to it.  Finally, a flag to signify if a file is currently being created will be implemented to ensure that any attempts to operate on a file that does not exist can wait until a file finishes being created before returning an error that a file doesn’t exist.  This can come in handy if a file is in the middle of being created, but a context switch causes to trying to write to the file to fail.
 
 
 
-##Rationale
+### Rationale
 Why using a list to keep track of the list of file currently used by any process over an array
 There is no fixed size on the number of files currently called by process neither do we know what is the maximum number of files pintos could handle
 Linked list structure is already implemented in lib/kernel/list.c
 
 
-##Additional Question
-###Question 1
+## Additional Questions
+### Question 1
 
-In file `sc-bad-sp.c` ,a constant `.-(64*1024*1024)`  in assemble code  is invalid, because user level code could only access virtual address ranging from 0GB - 3GB-1byte.Any access out of this area will cause a page fault.So the following function `fail` should never be called.
+In file `sc-bad-sp.c` , a constant `.-(64*1024*1024)` in assembly code is invalid because user level code could only access virtual addresses ranging from 0GB - 3GB - 1byte. Any accesses outside of this area will cause a page fault. So, the following function `fail` should never be called.
 
-###Question 2
-In file `sc-boundary-2.c`, a variable `p[1]`  at 17th lines of the file wiil cause a problems.
-First three bytes of this `p[1]` variable is located in the end of a page and the last bytes of it is located in a new pages.If a system call encounter this situation, it should be terminated immediately.So the following function `fail` should never be called.
+### Question 2
+In file `sc-boundary-2.c`, a variable `p[1]` at line 17 wiil cause a problem. First, three bytes of this `p[1]` variable are located at the end of a page and the last byte of it is located in a completely new page. If a system call encounters this situation, the process should be terminated immediately.  So, the following function `fail` should never be called.
 
-###Question 3
-The exsiting test could cover the sitation that if the value of `PHYS_BASE`  changes like it changes to 2GB, a stack pointer that points to a valid address between 2GB-3GB will cause a page fault.
+### Question 3
+The existing tests do not cover the sitation where the value of `PHYS_BASE` changes.  A new test in the suite could change it to 2GB. In this situation, creating a stack pointer that points to a valid address between 2GB-3GB will cause a page fault.
 
-###Question 4
+### Question 4
  
 ###### GDB Question1
 ```
