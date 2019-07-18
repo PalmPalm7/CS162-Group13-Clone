@@ -30,7 +30,7 @@ unsigned tell(int fd)
 void close(int fd)
 ```
 
-##Task 1: Argument Passing
+## Task 1: Argument Passing
 ### 1.Data structures and functions 
 Add the two macros to restrict the maximum number of comand-line arguments could be passed into a program and  the maximum length of an argument.
 
@@ -41,7 +41,7 @@ Add the two macros to restrict the maximum number of comand-line arguments could
 add the local variable `argument[MAX_ARGUMENT][ARGUMENT_MAX_LENGH]` to store parsed argument and file name
 
 ### 2.Algorithms 
-Parsing the argumet is pretty simple, since we do not need to worry about the I/O redirection or background process. What we do is basically spliting the argument `*file_name` in function `load` (in process.c) by single or continuous spaces, pushing the arguments  on stack when function `setup_stack` returns  and adjusting the `*sp` making it pointed at the top of stack which is just above the fake return address.We implement by call the function ` push_argument` just after calling `setup_stack`.
+Parsing the argumet does not rely on I/O redirection or background processes. The argument is split into `*file_name` in the function `load` (in process.c) along single or continuous spaces. It will push the arguments on the stack when the function `setup_stack` returns and move the stack pointer to the top of the stack just above the fake return address. It will be implemented by calling the function ` push_argument` right after calling `setup_stack`.
 
 ```
   /* Set up stack. */
@@ -52,11 +52,11 @@ Parsing the argumet is pretty simple, since we do not need to worry about the I/
 
 ```
 
-###3.Synchronization
-Sometimes user could execute same execute file for many times which cause multiple processes with same excuteble file exsit, however when  processes are creating system will malloc different page isolating the address of processes.So there may not be any issues of problems.
+### 3.Synchronization
+Sometimes the user could execute the same program multiple times causing multiple processes with the same excutable file to exist. When processes are created, the system will malloc different pages isolating the addresses of the processes.
 
-###4.Rationale
-Another design is that we can change the function of `process_excute` and pass the command-line arguments to this function directly,however if we modify this top-level function we have change many other function it invokes which is very troublesome and may encounter many problems that you can't predict.
+### 4.Rationale
+Another design that was considered involved changing the functionality of `process_excute` and passing the command-line arguments to this function directly.  However, if this function was to be modified, it would necessitate many other changes across the program due to how heavily other functions depend on it.
 
 Our design is  that we don't change the function and we just add some comments to modify the stack pointer and push some arguments before the user proscess runs. This strategy is very neat and have  little side effect to the function.
 
