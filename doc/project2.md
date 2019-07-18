@@ -60,6 +60,136 @@ Another design is that we can change the function of `process_excute` and pass t
 
 Our design is  that we don't change the function and we just add some comments to modify the stack pointer and push some arguments before the user proscess runs. This strategy is very neat and have  little side effect to the function.
 
+
+
+##Task 2 Process control syscalls
+
+### Data structures
+
+```
+/*in syscall.c*/
+int syscall_handler(struct intr_frame *f UNUSED)
+int practice(int i)
+void halt(void)
+void exit(int status)
+pid_t exec(const char *cmd_line)
+int wait(pid_t pid)
+
+/*in thread.c and thread.h*/
+struct wait_status {
+  int return_val;
+  tid_t child_pid;
+  tid_t parent_pid;
+  struct semaphore end;
+  int ref_cnt;
+  lock ref_cnt lock;
+  struct list_elem elem;
+}
+
+struct list wait_list; /* store all the wait_status*/
+
+
+/*in process.c*/
+tid_t process_execute(const char *file_name)
+
+```
+
+### Algorithm
+in `syscall_handler`, we put every syscalls in an `switch case` statement,which then calls seperate function to handle.
+since we already have all the syacall code defined in `syscall-nr.h`, we can just use them in `syacall_handler`
+
+in `practice` function, we will just use `return i++;` then the lib function will take care of the rest of things 
+
+in `halt` function, we can just call `shutdown_power_off()`
+
+in `exit` function, first we check the resources occupied by process, then release all of the resources(releasing locks, free memory, closing file for the process). second, check if there is any tid on the wait_list that is identical to child_pid or parent_pid, if there is, set the return value, decrement the reference count with lock to synchronize.If ref_cnt becomes 0, then remove the wait_status ,otherwise call `sema_down` and remove wait_status. 
+
+
+in `wait` function, first we check the waitlist with parent_pid and child_pid. If there is no eligible wait_status(i.e. no wait_status have the same pair of parent_pid and child_pid), then return -1 instantly. If there is, then call `sema_down` to the semaphore and get wait_status`s `return_val`, then use this as a return value.
+
+in `exec` function, we just call `process_execute` function to start the new process.
+in `process_execute` function ,we will create a new wait_status for the child process and parent process, so as to enable `wait`
+
+
+## Synchronization ##
+In `practice` and `halt` function, there is no syncrhonization issues, so we do not need to think about synchronization.
+
+In `exit`,`wait` and `exit`, 
+
+
+### Rationale
+
+#### Alternative design 1
+modify `struct thread`, add `child_pid` list and `parent_pid` for each process, and two semaphore to identify if a process is terminated, or there is a child terminated. whenever there is a `exec`, we add a `child_pid` to the parent`s list. Whenever there is a `wait`, we check the `child_pid` list to do the sanity check, and `sema_down` for specific child( or any child). 
+
+
+
+
+
+## Task 3: File Operation Syscalls
+###Data Structures
+struct files that contains
+The file descriptor, file name, lock, flag, reader count, list elem
+
+```
+Struct files {
+	Int reader_count;
+	Int file_descriptor;
+	Char* file_name;
+	Struct lock* file_lock;
+	Struct list_elem elem;
+}
+```
+
+
+→ Implement a list to keep track of all the e.g. struct list filelist in process.c ?, collabing with Task 2
+→ Tracking the file descriptor with a global variable int file_fd
+→ For the sake of the project I suggest use a lock for every filesystem syscall
+→ Lock is needed for every file, maybe implemented inside syscall_init (void) ?
+A flag if a file is being created to prevent any issues with trying to perform operations on a file before it finishes being created.  Maybe turn interrupts off instead?
+
+###Algorithms
+“No internal synchronization. 
+Concurrent accesses will interfere with one another. You should use synchronization to ensure that only one process at a time is executing file system code” (so not just writing, seek, tell, filesize too?) 
+
+“When a file is removed (deleted), its blocks are not deallocated until all processes have closed all file descriptors pointing to it. Therefore, a deleted file may still be accessible by processes that have it open.”
+→ A list for all the file used in current process as well as the number of files in that process.
+
+####create
+First, the file name will be checked to make sure it has no more than 14 characters. Next, `filesys_create (const char *name, off_t initial_size)` from filesys.c will be invoked to create the file. If the call succeeds, the filename will be added to the file list. While a file is being created, a flag will be upped to prevent any issues with trying to perform operations on a file before it finishes being created. If no file is currently being created, this flag will be set to 0.
+
+####remove
+This function will simple invoke `filesys_remove (const char *name)` from filesys.c to remove a file. If the file has been removed, add the filename will be removed from the filelist.
+
+####open
+This function will call `filesys_open (const char *name)` on a given file.  This function will fail if no file named NAME exists, or if an internal memory allocation fails. If this occurs, it will return the value -1.
+
+####filesize
+If the file exists, this function will call `file_length (struct file *file)` from file.c which returns the size of the file in bytes.
+
+####read
+If the file exists and the amount to be read is less than the filesize, the function `file_read (struct file *file, void *buffer, off_t size)` from file.c to read from a file into a buffer. Right before calling `file_read`, this function will call `file_deny_write` from file.c to ensure it is not edited during the read. After finishing the read, this function will check if there are other readers and call `file_allow_write` from file.c if there are none.
+
+####write
+Write will behave very similar to read, except it will always allow other writers to edit the file once it has finished writing.  First, this function will invoke `file_write (struct file *file, void *buffer, off_t size)`  from file.c to write from a buffer into a file. This function will assert the amount to be written is less than the file size and the filename is on the file list. It will also call `file_deny_write` from file.c before writing and file_allow_write from file.c after it finishes.
+
+####tell
+This will invoke `file_tell (struct file *file)` from file.c and return the current position in the given file to the caller.
+
+####close
+Close will first assert that the given filename is on the file list.  It will then remove the file from the file list and call `file_close` from file.c to close the file.
+
+##Synchronization
+The file lock will make sure that multiple operations do not try to modify the same file at the same time, with the exception of multiple files attempting to read the same file.  When first attempting to read or write to a file, `file_deny_write` will be immediately called to ensure that it can not have any additional writers until the action completes at which point `file_allow_write` will be called if the `reader_count` for the file is 0.  The `reader_count` for each file will help make sure that all readers have finished with a file before anything can be written to it.  Finally, a flag to signify if a file is currently being created will be implemented to ensure that any attempts to operate on a file that does not exist can wait until a file finishes being created before returning an error that a file doesn’t exist.  This can come in handy if a file is in the middle of being created, but a context switch causes to trying to write to the file to fail.
+
+
+
+##Rationale
+Why using a list to keep track of the list of file currently used by any process over an array
+There is no fixed size on the number of files currently called by process neither do we know what is the maximum number of files pintos could handle
+Linked list structure is already implemented in lib/kernel/list.c
+
+
 ##Additional Question
 ###Question 1
 
@@ -71,6 +201,72 @@ First three bytes of this `p[1]` variable is located in the end of a page and th
 
 ###Question 3
 The exsiting test could cover the sitation that if the value of `PHYS_BASE`  changes like it changes to 2GB, a stack pointer that points to a valid address between 2GB-3GB will cause a page fault.
+
+###Question 4
+ 
+###### GDB Question1
+```
+{tid = 1, status = THREAD_RUNNING, name = "main", '\000' <repeats 11 times>, stack = 0xc000ee0c "\210", <incomplete sequence \357>, priority = 31, allelem = {prev = 0
+xc0034b50 <all_list>, next = 0xc0104020}, elem = {prev = 0xc0034b60 <ready_list>, next = 0xc0034b68 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
+pintos-debug: dumplist #1: 0xc0104000 {tid = 2, status = THREAD_BLOCKED, name = "idle", '\000' <repeats 11 times>, stack = 0xc0104f34 "", priority = 0, allelem = {prev = 0xc000e020, next = 0xc0034b58 <all
+_list+8>}, elem = {prev = 0xc0034b60 <ready_list>, next = 0xc0034b68 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
+```
+
+There is only one currently running thread.
+
+```
+* 1    Thread <main>     process_execute (file_name=file_name@entry=0xc0007d50 "args-none") at ../../userprog/process.c:32
+```
+
+There is another waiting thread.
+
+###### GDB Question 2  
+```
+#0  process_execute (file_name=file_name@entry=0xc0007d50 "args-none") at ../../userprog/process.c:36
+
+ sema_init (&temporary, 0);
+
+
+#1  0xc002025e in run_task (argv=0xc0034a0c <argv+12>) at ../../threads/init.c:288
+
+ process_wait (process_execute (task));
+
+#2  0xc00208e4 in run_actions (argv=0xc0034a0c <argv+12>) at ../../threads/init.c:340
+
+     a->function (argv);
+
+#3  main () at ../../threads/init.c:133
+
+ run_actions (argv);
+```
+
+###### GDB Question 3 
+```
+1    Thread <main>     start_process (file_name_=0xc0109000) at ../../userprog/process.c:55
+```
+There is only one running thread and two waiting threads.
+
+```
+pintos-debug: dumplist #0: 0xc000e000 {tid = 1, status = THREAD_BLOCKED, name = "main", '\000' <repeats 11 times>, stack = 0xc000eebc "\001", priority = 31, allelem = {prev = 0xc0034b50 <all_list>, next = 0xc0104020}, elem = {prev = 0xc0036554 <temporary+4>, next = 0xc003655c <temporary+12>}, pagedir = 0x0, magic = 3446325067}
+pintos-debug: dumplist #1: 0xc0104000 {tid = 2, status = THREAD_BLOCKED, name = "idle", '\000' <repeats 11 times>, stack = 0xc0104f34 "", priority =0, allelem = {prev = 0xc000e020, next = 0xc010a020}, elem = {prev = 0xc0034b60 <ready_list>, next = 0xc0034b68 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
+pintos-debug: dumplist #2: 0xc010a000 {tid = 3, status = THREAD_RUNNING, name = "args-none\000\000\000\000\000\000", stack = 0xc010afd4 "", priority = 31, allelem = {prev = 0xc0104020, next = 0xc0034b58 <all_list+8>}, elem = {prev = 0xc0034b60 <ready_list>, next = 0xc0034b68 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
+```
+
+###### GDB Question 4 
+At line 45 in process.c 
+```
+tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+```
+
+###### GDB Question 5 
+0x0804870c
+
+###### GDB Question 6 
+``` 
+_start (argc=<error reading variable: can't compute CFA for this frame>, argv=<error reading variable: can't compute CFA for this frame>) at ../../lib/user/entry.c:9
+```
+###### GDB Question 7 
+Argc and argv aren’t implemented yet, so the program segfaults when it tries to use them.
 
 
 
