@@ -3,9 +3,6 @@
 
 #include <round.h>
 #include <stdint.h>
-// #include <stdbool.h>
-#include <list.h>
-#include "threads/thread.h"
 
 /* Number of timer interrupts per second. */
 #define TIMER_FREQ 100
@@ -21,10 +18,6 @@ void timer_sleep (int64_t ticks);
 void timer_msleep (int64_t milliseconds);
 void timer_usleep (int64_t microseconds);
 void timer_nsleep (int64_t nanoseconds);
-
-/* Comparison function to determine relative time until waking up */
-static bool wake_time_comp (const struct list_elem *a, const struct list_elem *b, void *aux); 
-
 
 /* Busy waits. */
 void timer_mdelay (int64_t milliseconds);

@@ -4,9 +4,6 @@
 #include <list.h>
 #include <stdbool.h>
 
-
-
-
 /* A counting semaphore. */
 struct semaphore
   {
@@ -19,6 +16,7 @@ void sema_down (struct semaphore *);
 bool sema_try_down (struct semaphore *);
 void sema_up (struct semaphore *);
 void sema_self_test (void);
+
 /* Lock. */
 struct lock
   {
@@ -42,7 +40,7 @@ void cond_init (struct condition *);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
-struct list_elem* list_max_thread(struct list *list);
+
 /* Optimization barrier.
 
    The compiler will not reorder operations across an

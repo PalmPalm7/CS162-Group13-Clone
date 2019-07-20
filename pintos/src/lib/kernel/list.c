@@ -1,9 +1,5 @@
 #include "list.h"
 #include "../debug.h"
-#include "threads/thread.h"
-#include "devices/timer.h"
-#include "threads/synch.h"
-#include <stdbool.h>
 
 /* Our doubly linked lists have two header elements: the "head"
    just before the first element and the "tail" just after the
@@ -526,5 +522,3 @@ list_min (struct list *list, list_less_func *less, void *aux)
     }
   return min;
 }
-   
-   

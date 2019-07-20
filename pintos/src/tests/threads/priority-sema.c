@@ -8,8 +8,6 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "devices/timer.h"
-#include <stdlib.h>
-
 
 static thread_func priority_sema_thread;
 static struct semaphore sema;
@@ -31,15 +29,12 @@ test_priority_sema (void)
       snprintf (name, sizeof name, "priority %d", priority);
       thread_create (name, priority, priority_sema_thread, NULL);
     }
-  int ch;
+
   for (i = 0; i < 10; i++)
     {
-      
       sema_up (&sema);
       msg ("Back in main thread.");
     }
-
-
 }
 
 static void
