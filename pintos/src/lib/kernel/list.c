@@ -1,6 +1,9 @@
 #include "list.h"
 #include "../debug.h"
+<<<<<<< HEAD
 #include "threads/thread.h"
+=======
+>>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 
 /* Our doubly linked lists have two header elements: the "head"
    just before the first element and the "tail" just after the
@@ -523,6 +526,7 @@ list_min (struct list *list, list_less_func *less, void *aux)
     }
   return min;
 }
+<<<<<<< HEAD
 
 /* Returns True if thread_1 has an earlier wake time than thread_2 and false otherwise. */
 bool
@@ -534,3 +538,5 @@ wake_time_comp (const struct list_elem *a, const struct list_elem *b, void *aux)
 }
    
    
+=======
+>>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45

@@ -3,13 +3,10 @@
 #include <inttypes.h>
 #include <round.h>
 #include <stdio.h>
-#include <stdbool.h>
-#include <list.h>
 #include "devices/pit.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include "lib/kernel/list.h"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -33,9 +30,6 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
-/* List of processes in a sleeping state from timer_sleep(). */
-static struct list sleep_list;
-
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -43,7 +37,6 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-  list_init (&sleep_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -96,6 +89,7 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
+<<<<<<< HEAD
   ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
   intr_set_level(INTR_OFF);
   int64_t start = timer_ticks ();
@@ -106,7 +100,13 @@ timer_sleep (int64_t ticks)
       thread_block();                           /* Ensure the thread doesn't try to run by blocking it */
       intr_set_level(INTR_ON);
   }
+=======
+  int64_t start = timer_ticks ();
+>>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 
+  ASSERT (intr_get_level () == INTR_ON);
+  while (timer_elapsed (start) < ticks)
+    thread_yield ();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -172,6 +172,7 @@ timer_ndelay (int64_t ns)
   real_time_delay (ns, 1000 * 1000 * 1000);
 }
 
+<<<<<<< HEAD
 /* Returns true if thread_1 has an earlier wake time than thread_2 and false otherwise. */
 static bool 
 wake_time_comp (const struct list_elem *x, const struct list_elem *y, void *aux) 
@@ -181,6 +182,8 @@ wake_time_comp (const struct list_elem *x, const struct list_elem *y, void *aux)
    return thread_2->wake_time >= thread_1->wake_time;
 }
 
+=======
+>>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 /* Prints timer statistics. */
 void
 timer_print_stats (void)
@@ -193,6 +196,7 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+<<<<<<< HEAD
   if (!list_empty (&sleep_list)) {                /* Ensure that there is at least 1 sleeping thread */
     struct list_elem *curr_elem = list_begin (&sleep_list);
     struct list_elem *next_elem;
@@ -215,6 +219,9 @@ timer_interrupt (struct intr_frame *args UNUSED)
     }
   }
   thread_tick();
+=======
+  thread_tick ();
+>>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

@@ -18,7 +18,7 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-
+#define ARGUMENT_MAX_NUM 20
 static struct semaphore temporary;
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -220,14 +220,19 @@ load (const char *file_name, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
+  char argument_maxlength[100];
+  memset(argument_maxlength,'\0',100);
+  memcpy(argument_maxlength,file_name,strlen(file_name));
+
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL)
     goto done;
   process_activate ();
-
+  char *token_filename,*save_ptr_filename;
+  token_filename = strtok_r(file_name," ",&save_ptr_filename);
   /* Open executable file. */
-  file = filesys_open (file_name);
+  file = filesys_open (token_filename);
   if (file == NULL)
     {
       printf ("load: %s: open failed\n", file_name);
@@ -305,13 +310,41 @@ load (const char *file_name, void (**eip) (void), void **esp)
           break;
         }
     }
-
+  
+  char *argument_address[ARGUMENT_MAX_NUM];
+  int argument_count = 0;
+  char *token,*save_ptr;
+  
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
-
+  
+  for (token = strtok_r(argument_maxlength," ",&save_ptr); token!= NULL;
+       token = strtok_r (NULL," ",&save_ptr))
+    { 
+      *esp-=strlen(token);
+      argument_address[argument_count++] = *esp;
+      memmove(*esp,token,strlen(token)+1);
+    }
+    *esp -= 4;
+    int j = 0;
+    for (j = argument_count - 1; j >= 0; j--)
+      {
+        *esp -= 4;
+        memcpy(*esp,&argument_address[j],4);
+      }
+    char l[4];
+    memcpy(l,esp,4);
+    *esp -= 4;
+    memcpy(*esp,l,4);
+    *esp -= 4;
+    memmove(*esp,&argument_count,4);
+    *esp -= 4;
+    //hex_dump(0,*esp,20,true);
   /* Start address. */
-  *eip = (void (*) (void)) ehdr.e_entry;
+
+  
+   *eip = (void (*) (void)) ehdr.e_entry;
 
   success = true;
 
@@ -442,6 +475,7 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
+        //*esp = PHYS_BASE;
         *esp = PHYS_BASE;
       else
         palloc_free_page (kpage);
