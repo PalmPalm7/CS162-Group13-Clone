@@ -23,6 +23,16 @@ static struct semaphore temporary;
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+/* Last used fd */
+
+/* Find the next unused fd */
+int
+find_fd(void) 
+{
+  int retval = thread_current()->fd_count;
+  thread_current()->fd_count++;
+  return retval;
+}
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
