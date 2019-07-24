@@ -65,7 +65,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   // printf("System call number: %d\n", args[0]);
   else if (args[0] == SYS_OPEN) {
   	file *open_file = filesys_open(args[1]);
-  	struct files f1 = create_files_struct(open_file);
+  	struct files *f1 = create_files_struct(open_file);
   	list_push_back(&open_list, &f1->elem);
   	f->eax = f1->file_descriptor;
   } else {
@@ -83,10 +83,10 @@ syscall_handler (struct intr_frame *f UNUSED)
       file_seek (file->file, args[2]);
     else if (args[0] == SYS_TELL)
       f->eax = file_tell (file->file);
-  	else if (args[0] == SYS_CLOSE) {
+    else if (args[0] == SYS_CLOSE) {
   	file_close(file->file);
   	list_remove(&file->elem);
-  	}
+    }
   }
 }
 
@@ -110,7 +110,7 @@ files_helper (int fd) {
       f = list_entry (e, struct files, elem);
       if (f->file_descriptor == fd)
       {
-        return &f;
+        return f;
       }
     }
   return NULL;
