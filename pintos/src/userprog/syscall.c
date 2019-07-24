@@ -90,7 +90,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   }
 }
 
-struct files
+struct files*
 create_files_struct(file *open_file) {
 	struct files *f1;
 	f1->reader_count = 0;
