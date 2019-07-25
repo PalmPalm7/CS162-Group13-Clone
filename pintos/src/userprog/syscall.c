@@ -81,7 +81,8 @@ syscall_handler (struct intr_frame *f)
   	if (open_file != NULL){
 	  	struct file_info *f1 = create_files_struct(open_file);
 	  	f1->file_name = args[1];
-	  	list_push_back(&open_list, &f1->elem);
+	  	// printf("%s\n", f1->file_name);
+	  	list_push_back(&thread_current()->open_list, &f1->elem);
 	  	f->eax = f1->file_descriptor;
 	  }
   }
@@ -111,6 +112,7 @@ syscall_handler (struct intr_frame *f)
     else if (args[0] == SYS_CLOSE) {
   	file_close(curr_file->file);
   	list_remove(&curr_file->elem);
+  	free(curr_file);
     }
   }
 }
@@ -131,7 +133,7 @@ int write (int fd, const void *buffer, unsigned length)
 
 struct file_info*
 create_files_struct(struct file *open_file) {
-	struct file_info *f1;
+	struct file_info *f1 = malloc(sizeof(struct file_info));
 	f1->reader_count = 0;
 	f1->file_descriptor = find_fd();
 	f1->file = open_file;
