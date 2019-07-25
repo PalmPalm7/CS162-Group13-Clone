@@ -32,6 +32,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f)
 {
+	struct list open_list = thread_current()->open_list;
 	uint32_t* args = ((uint32_t*) f->esp);
   switch (args[0]) {
     case SYS_READ:
@@ -70,9 +71,9 @@ syscall_handler (struct intr_frame *f)
     f->eax = i;
   }
 	else if (args[0] == SYS_CREATE) {
-  		filesys_create(args[1], args[2]);
+  		f->eax = filesys_create(args[1], args[2]);
   } else if (args[0] == SYS_REMOVE) {
-  		filesys_remove(args[1]);
+  		f->eax = filesys_remove(args[1]);
   } 
   // printf("System call number: %d\n", args[0]);
   else if (args[0] == SYS_OPEN) {
@@ -137,9 +138,11 @@ create_files_struct(struct file *open_file) {
 
 struct file_info* 
 files_helper (int fd) {
-  // TODO: Loop over the current file list
+  // Loop over the current file list
   struct list_elem *e;
   struct file_info *f;
+  struct list open_list = thread_current()->open_list;
+
   for(e = list_begin (&open_list); e != list_end (&open_list);
       e = list_next (e))
     {
