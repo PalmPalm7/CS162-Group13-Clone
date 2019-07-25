@@ -11,6 +11,8 @@
         "inttypes.h": "c",
         "atomic": "c",
         "thread.h": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "main.h": "c",
+        "lib.h": "c"
     }
 }

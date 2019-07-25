@@ -8,6 +8,7 @@
 #include "threads/interrupt.h"
 #include "userprog/process.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 
 struct file_info
   {
@@ -32,10 +33,21 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f)
 {
+	struct list open_list = thread_current()->open_list;
 	uint32_t* args = ((uint32_t*) f->esp);
+  //is_user_vaddr(args);
+  
+
+
+
+
   switch (args[0]) {
+
     case SYS_READ:
     case SYS_WRITE:
+
+
+
     case SYS_CREATE:
     case SYS_SEEK:
     case SYS_EXIT:
@@ -45,6 +57,9 @@ syscall_handler (struct intr_frame *f)
     case SYS_TELL:
     case SYS_CLOSE:
       break;
+    default:
+    thread_exit();
+    return;
   }
 
   switch (args[0]) {
@@ -56,7 +71,7 @@ syscall_handler (struct intr_frame *f)
     case SYS_READ:
       break;
   } if (args[0] == SYS_EXIT) {
-    f->eax = args[1];
+    //f->eax = args[1];
     printf("%s: exit(%d)\n", &thread_current ()->name, args[1]);
     thread_exit();
   } else if (args[0] == SYS_READ && args[1] == 0) {
@@ -70,11 +85,10 @@ syscall_handler (struct intr_frame *f)
     f->eax = i;
   }
 	else if (args[0] == SYS_CREATE) {
-  		filesys_create(args[1], args[2]);
+  		f->eax = filesys_create(args[1], args[2]);
   } else if (args[0] == SYS_REMOVE) {
-  		filesys_remove(args[1]);
+  		f->eax = filesys_remove(args[1]);
   } 
-  // printf("System call number: %d\n", args[0]);
   else if (args[0] == SYS_OPEN) {
   	struct file *open_file = filesys_open(args[1]);
   	struct file_info *f1 = create_files_struct(open_file);
@@ -137,9 +151,11 @@ create_files_struct(struct file *open_file) {
 
 struct file_info* 
 files_helper (int fd) {
-  // TODO: Loop over the current file list
+  // Loop over the current file list
   struct list_elem *e;
   struct file_info *f;
+  struct list open_list = thread_current()->open_list;
+
   for(e = list_begin (&open_list); e != list_end (&open_list);
       e = list_next (e))
     {

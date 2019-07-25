@@ -7,6 +7,7 @@
 #include "threads/synch.h"
 #include "threads/fixed-point.h"
 
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -95,10 +96,12 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
     int fd_count;
+    struct list open_list;
 #endif
 
     /* Owned by thread.c. */
@@ -109,7 +112,6 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
-static struct list open_list;
 
 
 void thread_init (void);
@@ -138,9 +140,11 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
+
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
 
 #endif /* threads/thread.h */

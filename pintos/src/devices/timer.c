@@ -89,6 +89,7 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
+
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
@@ -159,6 +160,7 @@ timer_ndelay (int64_t ns)
   real_time_delay (ns, 1000 * 1000 * 1000);
 }
 
+
 /* Prints timer statistics. */
 void
 timer_print_stats (void)
@@ -171,6 +173,7 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+
   thread_tick ();
 }
 
