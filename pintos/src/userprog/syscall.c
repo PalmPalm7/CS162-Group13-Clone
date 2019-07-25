@@ -22,6 +22,7 @@ static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
 struct file_info* create_files_struct(struct file *open_file);
 int write (int fd, const void *buffer, unsigned length);
+int read (int fd, const void *buffer, unsigned length);
 
 void
 syscall_init (void)
@@ -81,13 +82,17 @@ syscall_handler (struct intr_frame *f)
   	if (open_file != NULL){
 	  	struct file_info *f1 = create_files_struct(open_file);
 	  	f1->file_name = args[1];
-	  	list_push_back(&open_list, &f1->elem);
+	  	// printf("%s\n", f1->file_name);
+	  	list_push_back(&thread_current()->open_list, &f1->elem);
 	  	f->eax = f1->file_descriptor;
 	  }
   }
 
   else if (args[0] == SYS_WRITE) 
    f->eax = write(args[1], (void *) args[2], args[3]);
+
+  else if (args[0] == SYS_READ)
+    f->eax = read (args[1], (void *) args[2], args[3]);
 
   else {
     // TODO: Find the current file
@@ -97,9 +102,6 @@ syscall_handler (struct intr_frame *f)
 
     else if (args[0] == SYS_FILESIZE)
       f->eax = file_length (curr_file->file);
-
-    else if (args[0] == SYS_READ)
-      file_read (curr_file->file, (void *) args[2], args[3]);
   
 
     else if (args[0] == SYS_SEEK)
@@ -111,8 +113,28 @@ syscall_handler (struct intr_frame *f)
     else if (args[0] == SYS_CLOSE) {
   	file_close(curr_file->file);
   	list_remove(&curr_file->elem);
+  	free(curr_file);
     }
   }
+}
+
+int read (int fd, const void *buffer, unsigned length)
+{
+  if (fd == 0) /* if fd == STDIN_FILENO */
+  {
+    int i = 0;
+    for (i; i < length; i++)
+    {
+      input_getc();
+      return 0;
+    }
+  }
+
+  struct file_info *curr_file = files_helper (fd);
+  if (curr_file == NULL)
+    return -1;
+  int ret = file_read(curr_file, buffer, length);
+  return ret;
 }
 
 int write (int fd, const void *buffer, unsigned length)
@@ -131,7 +153,7 @@ int write (int fd, const void *buffer, unsigned length)
 
 struct file_info*
 create_files_struct(struct file *open_file) {
-	struct file_info *f1;
+	struct file_info *f1 = malloc(sizeof(struct file_info));
 	f1->reader_count = 0;
 	f1->file_descriptor = find_fd();
 	f1->file = open_file;
