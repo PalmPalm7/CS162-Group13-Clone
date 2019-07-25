@@ -114,7 +114,6 @@ syscall_handler (struct intr_frame *f)
       f->eax = filesys_remove(args[1]);
       break;
     } 
-  // printf("System call number: %d\n", args[0]);
     case SYS_OPEN:
     {
 	if (args[1] == NULL || !strcmp(args[1], "")) {
