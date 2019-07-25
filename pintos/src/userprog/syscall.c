@@ -72,7 +72,7 @@ syscall_handler (struct intr_frame *f)
   	f->eax = f1->file_descriptor;
   } else {
     // TODO: Find the current file
-    struct files *curr_file = files_helper (args[1]);
+    struct file_info *curr_file = files_helper (args[1]);
     if (curr_file == NULL)
       f->eax = -1;
 
