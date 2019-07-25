@@ -101,15 +101,6 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-<<<<<<< HEAD
- 
-  /*initialize load average*/
-  if (thread_mlfqs){
-    load_avg = fix_int (0);
-  }
-
-=======
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -145,35 +136,6 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-<<<<<<< HEAD
-  if (thread_mlfqs){
- /* for mlfqs*/ 
-    t->recent_cpu = fix_add (t->recent_cpu, fix_int(1));
-    /*calculate each second*/
-    if (now_ticks % TIMER_FREQ == 0)
-      {
-      thread_foreach (update_all_recent_cpu, NULL); 
-
-      int curr_thread_adjustment;
-
-      if (running_thread () != idle_thread) 
-        {
-          curr_thread_adjustment = 1;
-        } 
-      else 
-        {
-          curr_thread_adjustment = 0;
-        }
-        
-      fixed_point_t new_load_avg = fix_add (fix_mul (fix_frac (59 , 60) , load_avg),
-                                           fix_scale (fix_frac (1 , 60) , ready_size + curr_thread_adjustment)); /*calculated by formula*/
-     load_avg = new_load_avg; /*truncate to integer and store in global variables*/
-    }
-     if (now_ticks % 4 == 0) 
-       thread_foreach (thread_calculate_priority, NULL);
-  }
-=======
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -240,33 +202,8 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
-<<<<<<< HEAD
-  /* Initiate the member variables for priority donation */ 
-  if (!thread_mlfqs) {  
-    t->lock_own = 0;  
-    t->orginal_priority = priority; 
-    int i;  
-    for(i = 0; i < MAX_DONATION_NUM; i++) 
-    { 
-     t->priority_donation[i].lock = NULL; 
-     t->priority_donation[i].priority = -1;   
-    }  
-  }
-
   /* Add to run queue. */
   thread_unblock (t);
-
-  if (!thread_mlfqs) {
-    /* If the thread create a thread with bigger priority yield the CPU */  
-    if (thread_current()->priority < t->priority)  
-    thread_yield(); 
-  }
-
-=======
-  /* Add to run queue. */
-  thread_unblock (t);
-
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
   return tid;
 }
 
@@ -395,110 +332,14 @@ thread_foreach (thread_action_func *func, void *aux)
       struct thread *t = list_entry (e, struct thread, allelem);
       func (t, aux);
     }
-<<<<<<< HEAD
-
-}
-
-
-
-void 
-thread_check_donate_priority(struct thread *thread, void *lock)
-{
-  lock = (struct lock *)lock;
-  enum intr_level old_level;
-  int i = 0;
-  for (i = 0; i < thread->lock_own; i++)
-  {
-    if (thread->priority_donation[i].lock == lock)
-    {
-      if (thread->priority  < thread_current()->priority)
-      {
-        thread_do_donate_priority(lock,thread_current()->priority);
-      }
-    }
-  }
-  return;
-}
-
-
-/* Recursively donate the value*/
-void thread_do_donate_priority (struct lock* lock,int priority_donation)
-{
-  if (!lock)
-    return;
-  if (lock->holder == NULL)
-    return;
-  struct thread *t;
-  t = lock->holder;
-  int i = 0;
-  for (i = 0; i < t->lock_own; i++)
-  {
-    if (t->priority_donation[i].lock == lock)
-    
-    {
-      if (priority_donation > t->priority)
-      {
-        t->priority = priority_donation;
-        t->priority_donation[i].priority = priority_donation;
-      }
-    }  
-  }
-  thread_do_donate_priority (lock->holder->waiting_lock,priority_donation);
-}
-
-void 
-thread_undo_donate_priority (struct thread *thread, struct lock *lock)
-{
-  int i = 0;
-  for (i = 0; i < thread->lock_own; i++)  
-    { 
-      if (thread->priority_donation[i].lock == lock)  
-      { 
-        int j = i;  
-        for (j = i; j < thread->lock_own-1; j++) 
-        { 
-          thread->priority_donation[j].lock =  \
-          thread->priority_donation[j+1].lock; 
-          thread->priority_donation[j].priority =  \
-          thread->priority_donation[j+1].priority; 
-        } 
-        thread->lock_own--; 
-        break;  
-      } 
-    } 
-    int max = thread->orginal_priority; 
-    for (i = 0; i < thread->lock_own; i++)  
-    { 
-      if (thread->priority_donation[i].priority > max) 
-      { 
-        max = thread->priority_donation[i].priority;  
-      } 
-    } 
-    thread->priority = max; 
-=======
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority)
 {
-<<<<<<< HEAD
-  if (thread_mlfqs) 
-    {
-      struct thread* t = running_thread ();
-      thread_calculate_priority (t,NULL);
-    } 
-  else 
-    {
-      if (thread_current()->lock_own == 0) 
-        thread_current ()->priority = new_priority;  
-      thread_current ()->orginal_priority = new_priority; 
-      thread_yield();
-    }
-=======
+
   thread_current ()->priority = new_priority;
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 }
 
 /* Returns the current thread's priority. */
@@ -535,13 +376,9 @@ thread_get_load_avg (void)
 int
 thread_get_recent_cpu (void)
 {
-<<<<<<< HEAD
-  return fix_round (fix_scale (thread_current ()->recent_cpu, 100));
-  
-=======
+
   /* Not yet implemented. */
   return 0;
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -660,75 +497,8 @@ next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
     return idle_thread;
-<<<<<<< HEAD
-  else if (thread_mlfqs)
-  {
-      struct list_elem* next = list_max (&ready_list,less_priority,NULL);
-      list_remove(next); 
-      return list_entry (next, struct thread, elem);
-   }
-   else 
-   {
-    struct list_elem *e;  
-    struct list_elem *r;  
-    struct thread *max; 
-    struct thread *t; 
-    enum intr_level old_level;  
-
-     if (list_empty (&ready_list))  
-      return idle_thread; 
-    else  
-    { 
-      old_level = intr_disable ();  
-      max = list_entry (list_begin (&ready_list), struct thread, elem); 
-      r = list_begin (&ready_list); 
-
-       for(e = list_begin (&ready_list);e != list_end (&ready_list);  
-          e = list_next (e))  
-        { 
-          t = list_entry (e, struct thread, elem);  
-          if (t->priority > max->priority){ 
-            max = t;  
-            r = e;  
-          } 
-        } 
-      list_remove(r); 
-      intr_set_level (old_level); 
-    } 
-    return max;
-  }
-}
-
-
-struct list_elem *
-pop_out_max_priority_thread(struct list *thread_list)
-{
-  ASSERT(!list_empty(thread_list));
-  struct list_elem *e;
-  struct list_elem *r;
-  struct thread *t;
-  struct thread *max;
-  enum intr_level old_level;
-  old_level = intr_disable ();
-  max = list_entry (list_begin (thread_list), struct thread, elem);
-  r = list_begin (thread_list);
-  for(e = list_begin (thread_list);e != list_end (thread_list);
-      e = list_next (e))
-    {
-      t = list_entry (e, struct thread, elem);
-      if (t->priority > max->priority)
-      {
-        max = t;
-        r = e;
-      }
-    }
-  list_remove(r);
-  intr_set_level (old_level);
-  return r;
-=======
   else
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -795,15 +565,6 @@ schedule (void)
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
 
-<<<<<<< HEAD
-
-   if (thread_mlfqs && cur != idle_thread) 
-   {
-     thread_set_priority(0);
-   }
-
-=======
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
   if (cur != next)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
