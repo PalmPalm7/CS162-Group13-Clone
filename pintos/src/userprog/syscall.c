@@ -88,6 +88,8 @@ syscall_handler (struct intr_frame *f)
 	  		f1->file_name = args[1];
 	  		list_push_back(&thread_current()->open_list, &f1->elem);
 	  		f->eax = f1->file_descriptor;
+		} else {
+			f->eax = -1;
 		}
 	  }
   }
