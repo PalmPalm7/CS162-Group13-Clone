@@ -328,7 +328,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
-  *esp-=300;
+  *esp -= 1000;
   for (token = strtok_r(argument_maxlength," ",&save_ptr); token!= NULL;
        token = strtok_r (NULL," ",&save_ptr))
     { 

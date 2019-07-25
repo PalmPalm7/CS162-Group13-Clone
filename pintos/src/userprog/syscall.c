@@ -21,7 +21,7 @@ struct file_info
 static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
 struct file_info* create_files_struct(struct file *open_file);
-int write (struct file_info* curr_file, const void *buffer, unsigned length);
+int write (int fd, const void *buffer, unsigned length);
 
 void
 syscall_init (void)
@@ -81,7 +81,12 @@ syscall_handler (struct intr_frame *f)
   	f1->file_name = args[1];
   	list_push_back(&open_list, &f1->elem);
   	f->eax = f1->file_descriptor;
-  } else {
+  }
+
+  else if (args[0] == SYS_WRITE) 
+   f->eax = write(args[1], (void *) args[2], args[3]);
+
+  else {
     // TODO: Find the current file
     struct file_info *curr_file = files_helper (args[1]);
     if (curr_file == NULL)
@@ -92,10 +97,7 @@ syscall_handler (struct intr_frame *f)
 
     else if (args[0] == SYS_READ)
       file_read (curr_file->file, (void *) args[2], args[3]);
-
-    else if (args[0] == SYS_WRITE) {
-    f->eax = write(curr_file, (void *) args[2], args[3]);
-  } 
+  
 
     else if (args[0] == SYS_SEEK)
       file_seek (curr_file->file, args[2]);
@@ -110,14 +112,14 @@ syscall_handler (struct intr_frame *f)
   }
 }
 
-int write (struct file_info* curr_file, const void *buffer, unsigned length)
+int write (int fd, const void *buffer, unsigned length)
 {
-  int fd = curr_file->file_descriptor;
   if (fd == 1) /* if fd == STDOUT_FILENO */
   {
     putbuf(buffer,length);
     return length;
   }
+  struct file_info *curr_file = files_helper (fd);
   if(fd == NULL)
     return -1;
   int ret = file_write(curr_file->file, buffer, length);
