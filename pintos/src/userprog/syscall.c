@@ -58,27 +58,56 @@ syscall_handler (struct intr_frame *f)
     case SYS_WRITE:
     case SYS_READ:
       break;
-  } if (args[0] == SYS_EXIT) {
-    f->eax = args[1];
-    printf("%s: exit(%d)\n", &thread_current ()->name, args[1]);
-    thread_exit();
-  } else if (args[0] == SYS_READ && args[1] == 0) {
-    uint8_t *buffer = (uint8_t*) args[2];
-    int i = 0;
-    while (i < args[3]) {
-      buffer[i] = input_getc ();
-      if (buffer[i++] == '\n')
-        break;
-    }
-    f->eax = i;
   }
-	else if (args[0] == SYS_CREATE) {
-  		f->eax = filesys_create(args[1], args[2]);
-  } else if (args[0] == SYS_REMOVE) {
-  		f->eax = filesys_remove(args[1]);
-  } 
+  switch (args[0]) 
+  {
+   case SYS_EXIT:
+     {
+        f->eax = args[1];
+        printf ("%s: exit(%d)\n", &thread_current ()->name, args[1]);
+        thread_exit();
+        break;
+     }
+   case SYS_PRACTICE:
+     {
+       f -> eax =  args[1] + 1;
+       break; 
+     }
+   case SYS_HALT:
+     {
+       shutdown_power_off();
+     }   
+   case SYS_READ: 
+     if(args[1] == 0) 
+       {
+         uint8_t *buffer = (uint8_t*) args[2];
+         int i = 0;
+         while (i < args[3]) 
+         {
+           buffer[i] = input_getc ();
+           if (buffer[i++] == '\n')
+            break;
+          }
+          f->eax = i;
+          break;
+        }
+     else
+       {
+          f->eax = read (args[1], (void *) args[2], args[3]);break;
+       }
+    case SYS_CREATE:
+    {
+      f->eax = filesys_create(args[1], args[2]);
+      break;
+    } 
+    case SYS_REMOVE: 
+    {
+      f->eax = filesys_remove(args[1]);
+      break;
+    } 
   // printf("System call number: %d\n", args[0]);
-  else if (args[0] == SYS_OPEN) {
+    case SYS_OPEN:
+    {
 	if (args[1] == NULL || !strcmp(args[1], "")) {
 		f->eax = -1;
 	} else {
@@ -92,37 +121,38 @@ syscall_handler (struct intr_frame *f)
 			f->eax = -1;
 		}
 	  }
-  }
+       break;
+    }
 
-  else if (args[0] == SYS_WRITE) 
-   f->eax = write (args[1], (void *) args[2], args[3]);
+    case SYS_WRITE: 
+     f->eax = write (args[1], (void *) args[2], args[3]);break;
 
-  else if (args[0] == SYS_READ)
-    f->eax = read (args[1], (void *) args[2], args[3]);
 
-  else if (args[0] == SYS_SEEK)
-    f->eax = seek (args[1], args[2]);
+    case SYS_SEEK:
+      f->eax = seek (args[1], args[2]); break;
 	  
-  else {
-    // TODO: Find the current file
-    struct file_info *curr_file = files_helper (args[1]);
-    if (curr_file == NULL)
-      f->eax = -1;
+    default:
+    {
+      // TODO: Find the current file
+      struct file_info *curr_file = files_helper (args[1]);
+      if (curr_file == NULL)
+        f->eax = -1;
 
-    else if (args[0] == SYS_FILESIZE)
-      f->eax = file_length (curr_file->file);
-  
+      else if (args[0] == SYS_FILESIZE)
+        f->eax = file_length (curr_file->file);
+    
 
-    else if (args[0] == SYS_SEEK)
-      file_seek (curr_file->file, args[2]);
+      else if (args[0] == SYS_SEEK)
+        file_seek (curr_file->file, args[2]);
 
-    else if (args[0] == SYS_TELL)
-      f->eax = file_tell (curr_file->file);
+      else if (args[0] == SYS_TELL)
+        f->eax = file_tell (curr_file->file);
 
-    else if (args[0] == SYS_CLOSE) {
-  	file_close(curr_file->file);
-  	list_remove(&curr_file->elem);
-  	free(curr_file);
+      else if (args[0] == SYS_CLOSE) {
+    	file_close(curr_file->file);
+    	list_remove(&curr_file->elem);
+    	free(curr_file);
+      }
     }
   }
 }
