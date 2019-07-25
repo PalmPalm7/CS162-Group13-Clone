@@ -125,7 +125,9 @@ int read (int fd, const void *buffer, unsigned length)
     int i = 0;
     for (i; i < length; i++)
     {
-      input_getc();
+      char *temp;
+      temp = (char*) (buffer + i); /* Write the next char */
+      *temp = input_getc();
       return 0;
     }
   }
