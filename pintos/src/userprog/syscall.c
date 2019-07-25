@@ -23,8 +23,7 @@ struct file_info* files_helper (int fd);
 struct file_info* create_files_struct(struct file *open_file);
 int write (int fd, const void *buffer, unsigned length);
 int read (int fd, const void *buffer, unsigned length);
-void seek (int fd, unsigned length);
-unsigned tell (int fd);
+int seek (int fd, unsigned length);
 
 void
 syscall_init (void)
@@ -80,7 +79,7 @@ syscall_handler (struct intr_frame *f)
   } 
   // printf("System call number: %d\n", args[0]);
   else if (args[0] == SYS_OPEN) {
-	if (args[1] == NULL) {
+	if (args[1] == NULL || !strcmp(args[1], "")) {
 		f->eax = -1;
 	} else {
   		struct file *open_file = filesys_open(args[1]);
@@ -161,11 +160,11 @@ int write (int fd, const void *buffer, unsigned length)
   return ret;
 }
 
-void seek (int fd, unsigned length)
+int seek (int fd, unsigned length)
 {
   struct file_info *curr_file = files_helper (fd);
   if(curr_file == NULL)
-    return;
+    return -1;
   file_seek(curr_file, length);
 }
 
