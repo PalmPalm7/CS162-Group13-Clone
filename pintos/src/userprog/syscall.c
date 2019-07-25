@@ -42,14 +42,9 @@ syscall_handler (struct intr_frame *f)
     thread_exit();
   }
   
-
   switch (args[0]) {
-
     case SYS_READ:
     case SYS_WRITE:
-
-
-
     case SYS_CREATE:
     case SYS_SEEK:
     case SYS_EXIT:
@@ -77,11 +72,6 @@ syscall_handler (struct intr_frame *f)
   {
    case SYS_EXIT:
      {
-        if((args+1) >= 0xbffffffc)
-        {
-          printf("%s: exit(%d)\n", &thread_current ()->name, -1);
-          thread_exit ();
-        }
         f->eax = args[1];
         printf ("%s: exit(%d)\n", &thread_current ()->name, args[1]);
         thread_exit();
