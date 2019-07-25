@@ -8,6 +8,7 @@
 #include "threads/interrupt.h"
 #include "userprog/process.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 
 struct file_info
   {
@@ -36,9 +37,23 @@ syscall_handler (struct intr_frame *f)
 {
 	struct list open_list = thread_current()->open_list;
 	uint32_t* args = ((uint32_t*) f->esp);
+  if((int*)f->esp <= 0x08048000 ){
+    printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+    thread_exit();
+  }
+  
+
+
+
+
+
   switch (args[0]) {
+
     case SYS_READ:
     case SYS_WRITE:
+
+
+
     case SYS_CREATE:
     case SYS_SEEK:
     case SYS_EXIT:
@@ -48,6 +63,9 @@ syscall_handler (struct intr_frame *f)
     case SYS_TELL:
     case SYS_CLOSE:
       break;
+    default:
+    thread_exit();
+    return;
   }
 
   switch (args[0]) {
@@ -63,6 +81,11 @@ syscall_handler (struct intr_frame *f)
   {
    case SYS_EXIT:
      {
+        if((args+1) >= 0xbffffffc)
+        {
+          printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+          thread_exit ();
+        }
         f->eax = args[1];
         printf ("%s: exit(%d)\n", &thread_current ()->name, args[1]);
         thread_exit();
