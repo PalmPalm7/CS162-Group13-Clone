@@ -6,23 +6,7 @@
 #include <stdint.h>
 #include "threads/synch.h"
 #include "threads/fixed-point.h"
-<<<<<<< HEAD
-#include "threads/synch.h"
-#include "devices/timer.h"
 
-/* Struct to record every existing priority donation*/
-struct priority_donation
-  {   
-    struct lock *lock;   
-    int priority;     
-  };
-
-/* List of processes in THREAD_READY state, that is, processes
-   that are ready to run but not actually running. */
-static struct list ready_list;
-
-=======
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -112,25 +96,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-<<<<<<< HEAD
-    // struct list_elem alarm_elem;           Added to track semaphore 
 
-    
-    // struct list_elem sema_elem;          /* Added to track semaphore */
-    
-    int orginal_priority;
-    
-    int lock_own;
-
-    struct priority_donation priority_donation[MAX_DONATION_NUM]; 
-
-
-    struct lock *waiting_lock;
-
-
-
-=======
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -173,26 +139,12 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-<<<<<<< HEAD
-void thread_calculate_priority (struct thread* t, void *aux); 
-struct list_elem * pop_out_max_priority_thread (struct list *thread_list);
 
-void thread_check_donate_priority(struct thread *thread, void *lock);
-void thread_do_donate_priority(struct lock* lock,int priority_donation);
-void thread_undo_donate_priority (struct thread *thread, struct lock *lock);
-
-void priority_donation_release (struct thread *t,struct semaphore *sema);
-=======
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-<<<<<<< HEAD
 
-
-=======
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 
 #endif /* threads/thread.h */
