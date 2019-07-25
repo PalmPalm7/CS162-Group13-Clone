@@ -78,10 +78,12 @@ syscall_handler (struct intr_frame *f)
   // printf("System call number: %d\n", args[0]);
   else if (args[0] == SYS_OPEN) {
   	struct file *open_file = filesys_open(args[1]);
-  	struct file_info *f1 = create_files_struct(open_file);
-  	f1->file_name = args[1];
-  	list_push_back(&open_list, &f1->elem);
-  	f->eax = f1->file_descriptor;
+  	if (open_file != NULL){
+	  	struct file_info *f1 = create_files_struct(open_file);
+	  	f1->file_name = args[1];
+	  	list_push_back(&open_list, &f1->elem);
+	  	f->eax = f1->file_descriptor;
+	  }
   }
 
   else if (args[0] == SYS_WRITE) 

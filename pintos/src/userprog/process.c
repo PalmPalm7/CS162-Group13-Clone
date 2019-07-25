@@ -47,12 +47,20 @@ process_execute (const char *file_name)
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
+  char fn_copy_name[256];
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-
+  strlcpy (fn_copy_name,file_name,256);
+  int i = 0; 
+  for(i = 0; i < strlen(fn_copy_name); i++){
+    if (fn_copy_name[i] == ' '){
+      fn_copy_name[i] = '\0';
+      break;
+    }
+  }
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (fn_copy_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   return tid;
@@ -86,6 +94,9 @@ start_process (void *file_name_)
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
+
+
+  
   NOT_REACHED ();
 }
 
@@ -328,16 +339,16 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
-  *esp -= 1000;
   for (token = strtok_r(argument_maxlength," ",&save_ptr); token!= NULL;
        token = strtok_r (NULL," ",&save_ptr))
     { 
-      *esp-=strlen(token);
+      *esp-=strlen(token)+1;
       argument_address[argument_count++] = *esp;
       memmove(*esp,token,strlen(token)+1);
     }
     *esp -= 4;
     int j = 0;
+
     for (j = argument_count - 1; j >= 0; j--)
       {
         *esp -= 4;
@@ -350,7 +361,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
     *esp -= 4;
     memmove(*esp,&argument_count,4);
     *esp -= 4;
-    //hex_dump(0,*esp,20,true);
   /* Start address. */
 
   
@@ -361,6 +371,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
+
   return success;
 }
 
