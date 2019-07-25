@@ -98,7 +98,7 @@ syscall_handler (struct intr_frame *f)
   }
 }
 
-struct files*
+struct file_info*
 create_files_struct(struct file *open_file) {
 	struct file_info *f1;
 	f1->reader_count = 0;
@@ -107,7 +107,7 @@ create_files_struct(struct file *open_file) {
 	return f1;
 }
 
-struct files* 
+struct file_info* 
 files_helper (int fd) {
   // TODO: Loop over the current file list
   struct list_elem *e;
