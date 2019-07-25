@@ -37,8 +37,12 @@ syscall_handler (struct intr_frame *f)
 {
 	struct list open_list = thread_current()->open_list;
 	uint32_t* args = ((uint32_t*) f->esp);
-  //is_user_vaddr(args);
+  if((int*)f->esp <= 0x08048000 ){
+    printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+    thread_exit();
+  }
   
+
 
 
 
@@ -73,7 +77,11 @@ syscall_handler (struct intr_frame *f)
     case SYS_READ:
       break;
   } if (args[0] == SYS_EXIT) {
-    //f->eax = args[1];
+    if((args+1) >= 0xbffffffc){
+      printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+      thread_exit ();
+    }
+    f->eax = args[1];
     printf("%s: exit(%d)\n", &thread_current ()->name, args[1]);
     thread_exit();
   } else if (args[0] == SYS_READ && args[1] == 0) {
