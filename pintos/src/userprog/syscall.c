@@ -78,13 +78,16 @@ syscall_handler (struct intr_frame *f)
   } 
   // printf("System call number: %d\n", args[0]);
   else if (args[0] == SYS_OPEN) {
-  	struct file *open_file = filesys_open(args[1]);
-  	if (open_file != NULL){
-	  	struct file_info *f1 = create_files_struct(open_file);
-	  	f1->file_name = args[1];
-	  	// printf("%s\n", f1->file_name);
-	  	list_push_back(&thread_current()->open_list, &f1->elem);
-	  	f->eax = f1->file_descriptor;
+	if (args[1] == NULL) {
+		f->eax = -1;
+	} else {
+  		struct file *open_file = filesys_open(args[1]);
+  		if (open_file != NULL){
+	  		struct file_info *f1 = create_files_struct(open_file);
+	  		f1->file_name = args[1];
+	  		list_push_back(&thread_current()->open_list, &f1->elem);
+	  		f->eax = f1->file_descriptor;
+		}
 	  }
   }
 
@@ -98,7 +101,7 @@ syscall_handler (struct intr_frame *f)
     // TODO: Find the current file
     struct file_info *curr_file = files_helper (args[1]);
     if (curr_file == NULL)
-      return;
+      f->eax = -1;
 
     else if (args[0] == SYS_FILESIZE)
       f->eax = file_length (curr_file->file);
@@ -168,16 +171,15 @@ files_helper (int fd) {
   struct list_elem *e;
   struct file_info *f;
   struct list open_list = thread_current()->open_list;
-  if (list_size(&open_list) > 0) {
-  	for(e = list_begin (&open_list); e != list_end (&open_list);
-  	    e = list_next (e))
-   	 {
-   	   f = list_entry (e, struct file_info, elem);
-   	   if (f->file_descriptor == fd)
-   	   {
-   	     return f;
-    	  }
-       }
-  }
+
+  for(e = list_begin (&open_list); e != list_end (&open_list);
+      e = list_next (e))
+    {
+      f = list_entry (e, struct file_info, elem);
+      if (f->file_descriptor == fd)
+      {
+        return f;
+      }
+    }
   return NULL;
 }
