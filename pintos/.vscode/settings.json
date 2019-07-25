@@ -1,0 +1,16 @@
+{
+    "C_Cpp.dimInactiveRegions": false,
+    "files.associations": {
+        "list.h": "c",
+        "debug.h": "c",
+        "tests.h": "c",
+        "init.h": "c",
+        "interrupt.h": "c",
+        "gdt.h": "c",
+        "string.h": "c",
+        "inttypes.h": "c",
+        "atomic": "c",
+        "thread.h": "c",
+        "typeinfo": "c"
+    }
+}
