@@ -31,6 +31,8 @@ static struct list all_list;
 /* Idle thread. */
 static struct thread *idle_thread;
 
+static struct list open_list;
+
 /* Initial thread, the thread running init.c:main(). */
 static struct thread *initial_thread;
 
@@ -92,6 +94,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&open_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -220,6 +223,7 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+  t->fd_count = 3;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);

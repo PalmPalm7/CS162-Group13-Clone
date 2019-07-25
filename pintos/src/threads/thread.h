@@ -134,6 +134,7 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+    int fd_count;
 #endif
 
     /* Owned by thread.c. */
@@ -144,6 +145,8 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+static struct list open_list;
+
 
 void thread_init (void);
 void thread_start (void);
