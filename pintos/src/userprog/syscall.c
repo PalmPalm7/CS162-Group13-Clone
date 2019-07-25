@@ -154,7 +154,7 @@ int write (int fd, const void *buffer, unsigned length)
     return length;
   }
   struct file_info *curr_file = files_helper (fd);
-  if(fd == NULL)
+  if(curr_file == NULL)
     return -1;
   int ret = file_write(curr_file->file, buffer, length);
   return ret;
@@ -163,10 +163,20 @@ int write (int fd, const void *buffer, unsigned length)
 int seek (int fd, unsigned length)
 {
   struct file_info *curr_file = files_helper (fd);
-  if(fd == NULL)
+  if(curr_file == NULL)
     return -1;
   file_seek(curr_file, length);
 }
+
+unsigned tell (int fd)
+{
+  struct file_info *curr_file = files_helper (fd);
+  if (curr_file == NULL)
+    return -1;
+  unsigned ret = file_tell (curr_file);
+  return ret;
+}
+
 struct file_info*
 create_files_struct(struct file *open_file) {
 	struct file_info *f1 = malloc(sizeof(struct file_info));
