@@ -43,10 +43,6 @@ syscall_handler (struct intr_frame *f)
   }
   
 
-
-
-
-
   switch (args[0]) {
 
     case SYS_READ:
