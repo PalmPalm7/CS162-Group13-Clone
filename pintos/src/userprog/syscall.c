@@ -23,6 +23,7 @@ struct file_info* files_helper (int fd);
 struct file_info* create_files_struct(struct file *open_file);
 int write (int fd, const void *buffer, unsigned length);
 int read (int fd, const void *buffer, unsigned length);
+int seek (int fd, unsigned length);
 
 void
 syscall_init (void)
@@ -92,11 +93,14 @@ syscall_handler (struct intr_frame *f)
   }
 
   else if (args[0] == SYS_WRITE) 
-   f->eax = write(args[1], (void *) args[2], args[3]);
+   f->eax = write (args[1], (void *) args[2], args[3]);
 
   else if (args[0] == SYS_READ)
     f->eax = read (args[1], (void *) args[2], args[3]);
 
+  else if (args[0] == SYS_SEEK)
+    f->eax = seek (args[1], args[2]);
+	  
   else {
     // TODO: Find the current file
     struct file_info *curr_file = files_helper (args[1]);
@@ -156,6 +160,13 @@ int write (int fd, const void *buffer, unsigned length)
   return ret;
 }
 
+int seek (int fd, unsigned length)
+{
+  struct file_info *curr_file = files_helper (fd);
+  if(fd == NULL)
+    return -1;
+  file_seek(curr_file, length);
+}
 struct file_info*
 create_files_struct(struct file *open_file) {
 	struct file_info *f1 = malloc(sizeof(struct file_info));
