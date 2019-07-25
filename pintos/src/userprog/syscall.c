@@ -9,7 +9,19 @@
 #include "userprog/process.h"
 #include "threads/thread.h"
 
+struct file_info
+  {
+    int reader_count;
+    int file_descriptor;
+    const char *file_name;
+    struct file *file;
+    struct list_elem elem;
+  };
+
 static void syscall_handler (struct intr_frame *f);
+struct file_info* files_helper (int fd);
+struct file_info* create_files_struct(struct file *open_file);
+
 
 void
 syscall_init (void)
@@ -32,6 +44,7 @@ syscall_handler (struct intr_frame *f)
     case SYS_FILESIZE:
     case SYS_TELL:
     case SYS_CLOSE:
+      break;
   }
 
   switch (args[0]) {
@@ -47,7 +60,7 @@ syscall_handler (struct intr_frame *f)
     printf("%s: exit(%d)\n", &thread_current ()->name, args[1]);
     thread_exit();
   } else if (args[0] == SYS_READ && args[1] == 0) {
-    uint8_t *buffer = (uint8_t*) *args[2];
+    uint8_t *buffer = (uint8_t*) args[2];
     int i = 0;
     while (i < args[3]) {
       buffer[i] = input_getc ();
@@ -66,8 +79,8 @@ syscall_handler (struct intr_frame *f)
   // printf("System call number: %d\n", args[0]);
   else if (args[0] == SYS_OPEN) {
   	struct file *open_file = filesys_open(args[1]);
-  	struct file_infos *f1 = create_files_struct(open_file);
-  	f1->name = args[1];
+  	struct file_info *f1 = create_files_struct(open_file);
+  	f1->file_name = args[1];
   	list_push_back(&open_list, &f1->elem);
   	f->eax = f1->file_descriptor;
   } else {
@@ -115,7 +128,7 @@ files_helper (int fd) {
   for(e = list_begin (&open_list); e != list_end (&open_list);
       e = list_next (e))
     {
-      f = list_entry (e, struct files, elem);
+      f = list_entry (e, struct file_info, elem);
       if (f->file_descriptor == fd)
       {
         return f;

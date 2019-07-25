@@ -10,13 +10,6 @@ void process_exit (void);
 void process_activate (void);
 int find_fd(void);
 
-struct file_info
-  {
-    int reader_count;
-    int file_descriptor;
-    const char *file_name;
-    struct file *file;
-    struct list_elem elem;
-  };
+
 
 #endif /* userprog/process.h */
