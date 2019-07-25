@@ -21,7 +21,7 @@ struct file_info
 static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
 struct file_info* create_files_struct(struct file *open_file);
-
+int write (struct file_info* curr_file, const void *buffer, unsigned length);
 
 void
 syscall_init (void)
@@ -69,9 +69,7 @@ syscall_handler (struct intr_frame *f)
     }
     f->eax = i;
   }
-  else if (args[0] == SYS_WRITE && args[1] == 1) {
-    f->eax = args[3];
-  } else if (args[0] == SYS_CREATE) {
+	else if (args[0] == SYS_CREATE) {
   		filesys_create(args[1], args[2]);
   } else if (args[0] == SYS_REMOVE) {
   		filesys_remove(args[1]);
@@ -95,8 +93,9 @@ syscall_handler (struct intr_frame *f)
     else if (args[0] == SYS_READ)
       file_read (curr_file->file, (void *) args[2], args[3]);
 
-    else if (args[0] == SYS_WRITE)
-      file_write (curr_file->file, (void *) args[2], args[3]);
+    else if (args[0] == SYS_WRITE) {
+    f->eax = write(curr_file, (void *) args[2], args[3]);
+  } 
 
     else if (args[0] == SYS_SEEK)
       file_seek (curr_file->file, args[2]);
@@ -109,6 +108,20 @@ syscall_handler (struct intr_frame *f)
   	list_remove(&curr_file->elem);
     }
   }
+}
+
+int write (struct file_info* curr_file, const void *buffer, unsigned length)
+{
+  int fd = curr_file->file_descriptor;
+  if (fd == 1) /* if fd == STDOUT_FILENO */
+  {
+    putbuf(buffer,length);
+    return length;
+  }
+  if(fd == NULL)
+    return -1;
+  int ret = file_write(curr_file->file, buffer, length);
+  return ret;
 }
 
 struct file_info*
