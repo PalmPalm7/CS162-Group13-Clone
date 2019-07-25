@@ -98,7 +98,7 @@ syscall_handler (struct intr_frame *f)
     // TODO: Find the current file
     struct file_info *curr_file = files_helper (args[1]);
     if (curr_file == NULL)
-      f->eax = -1;
+      return;
 
     else if (args[0] == SYS_FILESIZE)
       f->eax = file_length (curr_file->file);
@@ -168,15 +168,16 @@ files_helper (int fd) {
   struct list_elem *e;
   struct file_info *f;
   struct list open_list = thread_current()->open_list;
-
-  for(e = list_begin (&open_list); e != list_end (&open_list);
-      e = list_next (e))
-    {
-      f = list_entry (e, struct file_info, elem);
-      if (f->file_descriptor == fd)
-      {
-        return f;
-      }
-    }
+  if (list_size(&open_list) > 0) {
+  	for(e = list_begin (&open_list); e != list_end (&open_list);
+  	    e = list_next (e))
+   	 {
+   	   f = list_entry (e, struct file_info, elem);
+   	   if (f->file_descriptor == fd)
+   	   {
+   	     return f;
+    	  }
+       }
+  }
   return NULL;
 }
