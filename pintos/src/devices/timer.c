@@ -89,20 +89,8 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
-<<<<<<< HEAD
-  ASSERT (intr_get_level () == INTR_ON);        /* Ensure that interrupts are turned on prior to putting the thread to sleep */
-  intr_set_level(INTR_OFF);
+
   int64_t start = timer_ticks ();
-  struct thread *t = thread_current();
-  if (ticks > 0) {
-      t->wake_time = start + ticks;             /* Set the time that the thread must awaken at. */
-      list_insert_ordered (&sleep_list, &t->elem, wake_time_comp, NULL);    /* Add thread to ordered sleep_list */
-      thread_block();                           /* Ensure the thread doesn't try to run by blocking it */
-      intr_set_level(INTR_ON);
-  }
-=======
-  int64_t start = timer_ticks ();
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 
   ASSERT (intr_get_level () == INTR_ON);
   while (timer_elapsed (start) < ticks)
@@ -172,18 +160,7 @@ timer_ndelay (int64_t ns)
   real_time_delay (ns, 1000 * 1000 * 1000);
 }
 
-<<<<<<< HEAD
-/* Returns true if thread_1 has an earlier wake time than thread_2 and false otherwise. */
-static bool 
-wake_time_comp (const struct list_elem *x, const struct list_elem *y, void *aux) 
-{
-   struct thread *thread_1 = list_entry (x, struct thread, elem);
-   struct thread *thread_2 = list_entry (y, struct thread, elem);
-   return thread_2->wake_time >= thread_1->wake_time;
-}
 
-=======
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 /* Prints timer statistics. */
 void
 timer_print_stats (void)
@@ -196,32 +173,8 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-<<<<<<< HEAD
-  if (!list_empty (&sleep_list)) {                /* Ensure that there is at least 1 sleeping thread */
-    struct list_elem *curr_elem = list_begin (&sleep_list);
-    struct list_elem *next_elem;
-     
-    while (curr_elem != list_end (&sleep_list))   /* Cycle through the sleep_list */
-    {
-      struct thread *curr_thread = list_entry (curr_elem, struct thread, elem);
-      if (curr_thread->wake_time <= ticks)        /* Awaken any threads whose wake_time is in the past */
-        {
-          next_elem = list_next(curr_elem);
-          list_remove (curr_elem);
-          thread_unblock(curr_thread);
-          curr_elem = next_elem;
-        }
-       else
-       {
-          thread_tick ();
-          return;
-       }
-    }
-  }
-  thread_tick();
-=======
+
   thread_tick ();
->>>>>>> cd6e30839ec4f92b678a4a0aa0e41d2d67f6ed45
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
