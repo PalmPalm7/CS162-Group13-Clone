@@ -10,7 +10,7 @@ void process_exit (void);
 void process_activate (void);
 int find_fd(void);
 
-struct files
+struct file_info
   {
     int reader_count;
     int file_descriptor;
