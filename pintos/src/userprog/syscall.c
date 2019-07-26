@@ -43,15 +43,6 @@ syscall_handler (struct intr_frame *f)
   }
   
 
-  switch (args[0]) {
-    case SYS_CREATE:
-    case SYS_REMOVE:
-    case SYS_OPEN:
-      break;
-    case SYS_WRITE:
-    case SYS_READ:
-      break;
-  }
   switch (args[0]) 
   {
    case SYS_EXIT:
