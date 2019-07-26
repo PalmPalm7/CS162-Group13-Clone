@@ -25,6 +25,7 @@ struct file_info* create_files_struct(struct file *open_file);
 int write (int fd, const void *buffer, unsigned length);
 int read (int fd, const void *buffer, unsigned length);
 int seek (int fd, unsigned length);
+void handle_exit(int ret_val);
 
 void
 syscall_init (void)
@@ -37,19 +38,23 @@ syscall_handler (struct intr_frame *f)
 {
 	struct list open_list = thread_current()->open_list;
 	uint32_t* args = ((uint32_t*) f->esp);
-  if((int*)f->esp <= 0x08048000 ){
-    printf("%s: exit(%d)\n", &thread_current ()->name, -1);
-    thread_exit();
-  }
+  if((int*)f->esp <= 0x08048000 )
+    {
+      printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+      thread_exit();
+    }
   
 
   switch (args[0]) 
   {
+   case SYS_EXEC:
+     {
+       handle_exec (args[1]);
+     }
    case SYS_EXIT:
      {
         f->eax = args[1];
-        printf ("%s: exit(%d)\n", &thread_current ()->name, args[1]);
-        thread_exit();
+        handle_exit(args[1]);
         break;
      }
    case SYS_PRACTICE:
@@ -218,4 +223,35 @@ files_helper (int fd) {
       }
     }
   return NULL;
+}
+
+void handle_exit(int ret_val)
+{
+  tid_t now_tid = thread_current () -> tid;
+  struct list_elem* e;
+  for (e = list_begin (&wait_list); e!=list_end (&wait_list);
+      e = list_next (e))
+    {
+      struct wait_status *status = list_entry(e,struct wait_status, elem);
+      if (status -> child_pid == now_tid)
+        {
+          status -> return_val = ret_val;
+          lock_acquire (&status -> ref_cnt_lock);
+          status -> ref_cnt --;
+          lock_release (&status -> ref_cnt_lock);
+          if(status -> ref_cnt == 0)
+          {
+            list_remove(e);
+          }
+          sema_down(&status -> end_p);
+        }
+     }
+   printf ("%s: exit(%d)\n", &thread_current ()->name, ret_val);
+   thread_exit();
+}
+
+tid_t handle_exec(const char *cmd_line)
+{
+  tid_t child_tid;
+  process_execute(cmd_line);     
 }

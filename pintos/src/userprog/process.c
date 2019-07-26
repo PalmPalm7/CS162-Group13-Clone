@@ -59,6 +59,9 @@ process_execute (const char *file_name)
       break;
     }
   }
+  
+    
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (fn_copy_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
@@ -110,10 +113,24 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED)
+process_wait (tid_t child_tid)
 {
   sema_down (&temporary);
-  return 0;
+  tid_t now_tid = thread_current() -> tid;
+  struct wait_status *status;
+  struct list_elem *e;
+  for(e = list_begin (&wait_list); e != list_end (&wait_list);
+      e = list_next (e))
+    {
+      status = list_entry(e, struct wait_status, elem);
+      if(status -> child_pid == child_tid &&
+         status -> parent_pid == now_tid)
+        {
+          sema_down(&status -> end_p);
+          return status -> return_val;
+        }
+    }
+  return -1;
 }
 
 /* Free the current process's resources. */
@@ -139,7 +156,7 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
-  sema_up (&temporary);
+  sema_up(&temporary);
 }
 
 /* Sets up the CPU for running user code in the current
