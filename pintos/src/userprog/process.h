@@ -10,6 +10,17 @@ void process_exit (void);
 void process_activate (void);
 int find_fd(void);
 
-
+/*keep the status of the two processes*/
+struct wait_status {
+  int return_val;
+  tid_t child_pid;
+  tid_t parent_pid;
+  struct semaphore end_p;
+  int ref_cnt;
+  struct lock ref_cnt_lock;
+  struct list_elem elem;
+};
+/* status of all wait */
+struct list wait_list;
 
 #endif /* userprog/process.h */

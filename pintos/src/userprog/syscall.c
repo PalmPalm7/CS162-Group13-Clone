@@ -47,13 +47,18 @@ syscall_handler (struct intr_frame *f)
 
   switch (args[0]) 
   {
+   case SYS_WAIT:
+     {
+       f -> eax = process_wait(args[1]);
+       break;
+     }
    case SYS_EXEC:
      {
-       handle_exec (args[1]);
+       f -> eax = handle_exec (args[1]); 
+       break;
      }
    case SYS_EXIT:
      {
-        f->eax = args[1];
         handle_exit(args[1]);
         break;
      }
@@ -239,12 +244,19 @@ void handle_exit(int ret_val)
           lock_acquire (&status -> ref_cnt_lock);
           status -> ref_cnt --;
           lock_release (&status -> ref_cnt_lock);
-          if(status -> ref_cnt == 0)
-          {
-            list_remove(e);
-          }
           sema_down(&status -> end_p);
         }
+      else if (status -> parent_pid == now_tid)/* parent process exit*/
+             {
+               lock_acquire (&status -> ref_cnt_lock);
+               status -> ref_cnt --;
+               lock_release (&status -> ref_cnt_lock);
+             }
+     if(status -> ref_cnt == 0)
+       {
+         list_remove(e);
+         free(status);
+       }
      }
    printf ("%s: exit(%d)\n", &thread_current ()->name, ret_val);
    thread_exit();
@@ -253,5 +265,16 @@ void handle_exit(int ret_val)
 tid_t handle_exec(const char *cmd_line)
 {
   tid_t child_tid;
-  process_execute(cmd_line);     
+  tid_t parent_tid = thread_current() -> tid;
+  child_tid = process_execute(cmd_line); 
+  if(child_tid == TID_ERROR)
+    return child_tid;
+  struct wait_status *new_status =  (struct wait_status*) malloc (sizeof (struct wait_status));
+  new_status -> child_pid = child_tid;
+  new_status -> parent_pid = parent_tid;
+  sema_init (&new_status -> end_p, 0);
+  lock_init (&new_status -> ref_cnt_lock);
+  new_status -> ref_cnt = 2;
+  list_push_back(&wait_list, &new_status -> elem);
+  return child_tid; 
 }
