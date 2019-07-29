@@ -19,6 +19,7 @@ struct wait_status {
   int ref_cnt;
   struct lock ref_cnt_lock;
   struct list_elem elem;
+ 
 };
 
 

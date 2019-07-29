@@ -61,19 +61,13 @@ process_execute (const char *file_name)
   }
   
   tid_t parent_tid = thread_current() -> tid;
-  lock_acquire(&exec_lock);
-  sema_init (&temporary,0);
+  lock_acquire (&exec_lock);
+  sema_init (&temporary, 0);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (fn_copy_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
-  sema_down (&temporary);
-  lock_release(&exec_lock);
-  if(load_val)
-  {
-    tid = TID_ERROR;
-    return tid;
-  }
+
   struct wait_status *new_status =  (struct wait_status*) malloc (sizeof (struct wait_status));
   new_status -> child_pid = tid;
   new_status -> parent_pid = parent_tid;
@@ -82,6 +76,10 @@ process_execute (const char *file_name)
   new_status -> ref_cnt = 2;
   list_push_back(&wait_list, &new_status -> elem);
   
+  sema_down (&temporary);
+  lock_release(&exec_lock);
+  if(load_val)
+    tid = TID_ERROR;
  
   return tid;
 }
