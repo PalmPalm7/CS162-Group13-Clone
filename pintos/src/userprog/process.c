@@ -20,12 +20,11 @@
 #include "threads/vaddr.h"
 #define ARGUMENT_MAX_NUM 20
 static struct semaphore temporary;
-int load_val;
- struct lock exec_lock;
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 /* Last used fd */
+
 /* Find the next unused fd */
 int
 find_fd(void) 
@@ -44,6 +43,8 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
+
+  sema_init (&temporary, 0);
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -53,36 +54,16 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
   strlcpy (fn_copy_name,file_name,256);
   int i = 0; 
-  for(i = 0; i < (int) strlen(fn_copy_name); i++){
+  for(i = 0; i < strlen(fn_copy_name); i++){
     if (fn_copy_name[i] == ' '){
       fn_copy_name[i] = '\0';
       break;
     }
   }
-  
-  tid_t parent_tid = thread_current() -> tid;
-  lock_acquire(&exec_lock);
-  sema_init (&temporary,0);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (fn_copy_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
-  sema_down (&temporary);
-  lock_release(&exec_lock);
-  if(load_val)
-  {
-    tid = TID_ERROR;
-    return tid;
-  }
-  struct wait_status *new_status =  (struct wait_status*) malloc (sizeof (struct wait_status));
-  new_status -> child_pid = tid;
-  new_status -> parent_pid = parent_tid;
-  sema_init (&new_status -> end_p, 0);
-  lock_init (&new_status -> ref_cnt_lock);
-  new_status -> ref_cnt = 2;
-  list_push_back(&wait_list, &new_status -> elem);
-  
- 
   return tid;
 }
 
@@ -105,14 +86,8 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success)
-    {
-      load_val = -1;
-      sema_up(&temporary);
-      handle_exit(-1);
-      thread_exit ();
-    }
-    load_val = 0;
-    sema_up(&temporary);
+    thread_exit ();
+
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -136,28 +111,10 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid)
+process_wait (tid_t child_tid UNUSED)
 {
-  tid_t now_tid = thread_current() -> tid;
-  struct wait_status *status;
-  struct list_elem *e;
-  for(e = list_begin (&wait_list); e != list_end (&wait_list);
-      e = list_next (e))
-    {
-      status = list_entry(e, struct wait_status, elem);
-      if(status -> child_pid == child_tid &&
-         status -> parent_pid == now_tid)
-        {
-          sema_down(&status -> end_p);
-          e = list_remove(e);
-          int ret_val = status -> return_val;
-          free (status);
-          return ret_val;
-        }
-      if(e == list_end (&wait_list))
-        break;
-    }
-  return -1;
+  sema_down (&temporary);
+  return 0;
 }
 
 /* Free the current process's resources. */
@@ -166,6 +123,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -182,6 +140,7 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+  sema_up (&temporary);
 }
 
 /* Sets up the CPU for running user code in the current
