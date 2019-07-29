@@ -19,8 +19,8 @@ struct file_info
     struct list_elem elem;
   };
 
-struct lock exec_lock; /* ensure only one threads can run exec*/
 
+extern struct lock exec_lock; /* ensure only one threads can run exec*/
 static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
 struct file_info* create_files_struct(struct file *open_file);
@@ -275,9 +275,7 @@ tid_t handle_exec(const char *cmd_line)
   if (cmd_line > PHYS_BASE || get_user (cmd_line) == -1) 
     return -1;
   tid_t child_tid;
-  lock_acquire (&exec_lock);
   child_tid = process_execute (cmd_line); 
-  lock_release (&exec_lock);
   return child_tid; 
 }
 
