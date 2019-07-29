@@ -19,6 +19,9 @@ struct file_info* create_files_struct(struct file *open_file);
 int write (int fd, const void *buffer, unsigned length);
 int read (int fd, const void *buffer, unsigned length);
 int seek (int fd, unsigned length);
+tid_t handle_exec(const char *cmd_line);
+static int get_user (const uint8_t *uaddr);
+static bool put_user (uint8_t *udst, uint8_t byte);
 
 void
 syscall_init (void)
@@ -69,13 +72,21 @@ syscall_handler (struct intr_frame *f)
     case SYS_READ:
       break;
   } if (args[0] == SYS_EXIT) {
-    if((args+1) >= PHYS_BASE){
-      printf("%s: exit(%d)\n", &thread_current ()->name, -1);
-      thread_exit ();
-    }
-    f->eax = args[1];
-    printf("%s: exit(%d)\n", &thread_current ()->name, args[1]);
-    thread_exit();
+      if((args+1) >= PHYS_BASE){
+        printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+        thread_exit ();
+      }
+      f->eax = args[1];
+      printf("%s: exit(%d)\n", &thread_current ()->name, args[1]);
+      thread_exit();
+  } else if (args[0] == SYS_EXEC) {
+    f->eax = handle_exec (args[1]); 
+  } else if (args[0] == SYS_WAIT) {
+    f->eax = process_wait(args[1]);
+  } else if (args[0] == SYS_PRACTICE) {
+    f->eax =  args[1] + 1;
+  } else if (args[0] == SYS_HALT) {
+    shutdown_power_off();
   } else if (args[0] == SYS_READ && args[1] == 0) {
     uint8_t *buffer = (uint8_t*) args[2];
     int i = 0;
@@ -275,3 +286,33 @@ files_helper (int fd) {
   return NULL;
 }
 
+tid_t handle_exec(const char *cmd_line)
+{
+  if (cmd_line > PHYS_BASE || get_user (cmd_line) == -1) 
+    return -1;
+  tid_t child_tid;
+  child_tid = process_execute (cmd_line); 
+  return child_tid; 
+}
+
+/* Reads a byte at user virtual address UADDR.
+UADDR must be below PHYS_BASE.
+Returns the byte value if successful, -1 if a segfault
+occurred. */
+static int
+get_user (const uint8_t *uaddr)
+{
+  int result;
+  asm ("movl $1f, %0; movzbl %1, %0; 1:": "=&a" (result) : "m" (*uaddr));
+  return result;
+}
+/* Writes BYTE to user address UDST.
+UDST must be below PHYS_BASE.
+Returns true if successful, false if a segfault occurred. */
+static bool
+put_user (uint8_t *udst, uint8_t byte)
+{
+  int error_code;
+  asm ("movl $1f, %0; movb %b2, %1; 1:": "=&a" (error_code), "=m" (*udst) : "q" (byte));
+  return error_code != -1;
+}
