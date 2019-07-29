@@ -53,7 +53,7 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
   strlcpy (fn_copy_name,file_name,256);
   int i = 0; 
-  for(i = 0; i < strlen(fn_copy_name); i++){
+  for(i = 0; i < (int) strlen(fn_copy_name); i++){
     if (fn_copy_name[i] == ' '){
       fn_copy_name[i] = '\0';
       break;
