@@ -18,7 +18,7 @@ struct file_info
     struct file *file;
     struct list_elem elem;
   };
-
+struct semaphore temporary;
 
 extern struct lock exec_lock; /* ensure only one threads can run exec*/
 static void syscall_handler (struct intr_frame *f);
@@ -38,6 +38,7 @@ syscall_init (void)
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
  
   lock_init(&exec_lock); 
+  sema_init(&temporary,0);
 }
 
 static void
@@ -237,7 +238,8 @@ files_helper (int fd) {
   return NULL;
 }
 
-void handle_exit(int ret_val)
+void 
+handle_exit(int ret_val)
 {
   tid_t now_tid = thread_current () -> tid;
   struct list_elem* e;
@@ -270,7 +272,8 @@ void handle_exit(int ret_val)
    printf ("%s: exit(%d)\n", &thread_current ()->name, ret_val);
 }
 
-tid_t handle_exec(const char *cmd_line)
+tid_t 
+handle_exec(const char *cmd_line)
 {
   if (cmd_line > PHYS_BASE || get_user (cmd_line) == -1) 
     return -1;

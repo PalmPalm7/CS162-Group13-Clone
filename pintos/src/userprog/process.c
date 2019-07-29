@@ -19,7 +19,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #define ARGUMENT_MAX_NUM 20
-static struct semaphore temporary;
+extern struct semaphore temporary;
 int load_val;
  struct lock exec_lock;
 static thread_func start_process NO_RETURN;
@@ -61,12 +61,11 @@ process_execute (const char *file_name)
   
   tid_t parent_tid = thread_current() -> tid;
   lock_acquire(&exec_lock);
-  sema_init (&temporary,0);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (fn_copy_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
-  sema_down (&temporary);
+ // sema_down (&temporary);
   lock_release(&exec_lock);
   if(load_val)
   {
@@ -106,12 +105,12 @@ start_process (void *file_name_)
   if (!success)
     {
       load_val = -1;
-      sema_up(&temporary);
+   //   sema_up(&temporary);
       handle_exit(-1);
       thread_exit ();
     }
     load_val = 0;
-    sema_up(&temporary);
+    //sema_up(&temporary);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
