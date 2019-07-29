@@ -156,6 +156,12 @@ page_fault (struct intr_frame *f)
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");
+  if(user)
+    kill(f);
+  f -> eip = f -> eax;
+  f -> eax = 0xffffffff;
+  if(fault_addr != 0xffffffff)
+     return;
   kill (f);
 }
 
