@@ -24,7 +24,6 @@ static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 /* Last used fd */
-
 /* Find the next unused fd */
 int
 find_fd(void) 
@@ -60,12 +59,21 @@ process_execute (const char *file_name)
     }
   }
   
-    
+  tid_t parent_tid = thread_current() -> tid;
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (fn_copy_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
+
+  struct wait_status *new_status =  (struct wait_status*) malloc (sizeof (struct wait_status));
+  new_status -> child_pid = tid;
+  new_status -> parent_pid = parent_tid;
+  sema_init (&new_status -> end_p, 0);
+  lock_init (&new_status -> ref_cnt_lock);
+  new_status -> ref_cnt = 2;
+  list_push_back(&wait_list, &new_status -> elem);
+ 
   return tid;
 }
 
@@ -88,7 +96,10 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success)
-    thread_exit ();
+    {
+      handle_exit(-1);
+      thread_exit ();
+    }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -139,7 +150,6 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
