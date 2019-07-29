@@ -9,15 +9,9 @@
 #include "userprog/process.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "userprog/pagedir.h"
 
-struct file_info
-  {
-    int reader_count;
-    int file_descriptor;
-    const char *file_name;
-    struct file *file;
-    struct list_elem elem;
-  };
+
 
 static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
@@ -37,14 +31,12 @@ syscall_handler (struct intr_frame *f)
 {
 	struct list open_list = thread_current()->open_list;
 	uint32_t* args = ((uint32_t*) f->esp);
+  uint32_t* pagedir = thread_current()->pagedir;
   if((int*)f->esp <= 0x08048000 ){
     printf("%s: exit(%d)\n", &thread_current ()->name, -1);
     thread_exit();
   }
   
-
-
-
 
 
   switch (args[0]) {
@@ -77,7 +69,7 @@ syscall_handler (struct intr_frame *f)
     case SYS_READ:
       break;
   } if (args[0] == SYS_EXIT) {
-    if((args+1) >= 0xbffffffc){
+    if((args+1) >= PHYS_BASE){
       printf("%s: exit(%d)\n", &thread_current ()->name, -1);
       thread_exit ();
     }
@@ -93,33 +85,56 @@ syscall_handler (struct intr_frame *f)
         break;
     }
     f->eax = i;
-  }
+  } 
+
 	else if (args[0] == SYS_CREATE) {
+    if (args[1] == 0) {
+      f->eax = -1;
+      printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+      thread_exit();
+    } else {
+      void* valid_adress = pagedir_get_page(pagedir, args[1]);
+      if (valid_adress == NULL) {
+        f->eax = -1;
+        printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+        thread_exit();
+      }
+
   		f->eax = filesys_create(args[1], args[2]);
+    }
+
   } else if (args[0] == SYS_REMOVE) {
   		f->eax = filesys_remove(args[1]);
   } 
+
   else if (args[0] == SYS_OPEN) {
-	if (args[1] == NULL || !strcmp(args[1], "")) {
-		f->eax = -1;
-	} else {
-  		struct file *open_file = filesys_open(args[1]);
-  		if (open_file != NULL){
-	  		struct file_info *f1 = create_files_struct(open_file);
-	  		f1->file_name = args[1];
-	  		list_push_back(&thread_current()->open_list, &f1->elem);
-	  		f->eax = f1->file_descriptor;
-		} else {
-			f->eax = -1;
-		}
+	 if (args[1] == NULL || !strcmp(args[1], "")) {
+		  f->eax = -1;
+	  } else {
+      void* valid_adress = pagedir_get_page(pagedir, args[1]);
+      if (valid_adress == NULL) {
+        f->eax = -1;
+      } else {
+    		struct file *open_file = filesys_open(args[1]);
+    		if (open_file != NULL){
+  	  		struct file_info *f1 = create_files_struct(open_file);
+  	  		f1->file_name = args[1];
+  	  		list_push_back(&thread_current()->open_list, &f1->elem);
+  	  		f->eax = f1->file_descriptor;
+  		  } else {
+  			  f->eax = -1;
+  		  }
+      }
 	  }
   }
 
-  else if (args[0] == SYS_WRITE) 
-   f->eax = write (args[1], (void *) args[2], args[3]);
+  else if (args[0] == SYS_WRITE){
+     f->eax = write (args[1], (void *) args[2], args[3]);
+ }
 
-  else if (args[0] == SYS_READ)
-    f->eax = read (args[1], (void *) args[2], args[3]);
+  else if (args[0] == SYS_READ){
+      f->eax = read (args[1], (void *) args[2], args[3]);
+  }
 
   else if (args[0] == SYS_SEEK)
     f->eax = seek (args[1], args[2]);
@@ -141,12 +156,17 @@ syscall_handler (struct intr_frame *f)
       f->eax = file_tell (curr_file->file);
 
     else if (args[0] == SYS_CLOSE) {
-  	file_close(curr_file->file);
-  	list_remove(&curr_file->elem);
-  	free(curr_file);
+      if (args[1] == 1 || args[1] == 2) {
+        f->eax = -1;
+      } else {
+      list_remove(&curr_file->elem);
+  	  file_close(curr_file->file);
+  	  free(curr_file);
+      }
     }
   }
 }
+
 
 int read (int fd, const void *buffer, unsigned length)
 {
@@ -161,26 +181,38 @@ int read (int fd, const void *buffer, unsigned length)
       return 0;
     }
   }
-
+  if (!is_user_vaddr(buffer) || buffer == NULL) {
+    printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+    thread_exit();
+  } else {
   struct file_info *curr_file = files_helper (fd);
   if (curr_file == NULL)
     return -1;
-  int ret = file_read(curr_file, buffer, length);
+  int ret = file_read(curr_file->file, buffer, length);
   return ret;
+  }
 }
 
 int write (int fd, const void *buffer, unsigned length)
 {
+  uint32_t* pagedir = thread_current()->pagedir;
+
   if (fd == 1) /* if fd == STDOUT_FILENO */
   {
     putbuf(buffer,length);
     return length;
   }
+  void* valid_adress = pagedir_get_page(pagedir, buffer);
+  if (valid_adress == NULL) {
+    printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+    thread_exit();
+  } else {
   struct file_info *curr_file = files_helper (fd);
   if(curr_file == NULL)
     return -1;
   int ret = file_write(curr_file->file, buffer, length);
   return ret;
+  } 
 }
 
 int seek (int fd, unsigned length)
@@ -206,6 +238,7 @@ create_files_struct(struct file *open_file) {
 	f1->reader_count = 0;
 	f1->file_descriptor = find_fd();
 	f1->file = open_file;
+  f1->removed = false;
 	return f1;
 }
 
@@ -215,6 +248,13 @@ files_helper (int fd) {
   struct list_elem *e;
   struct file_info *f;
   struct list open_list = thread_current()->open_list;
+  int maxfd = thread_current()->fd_count;
+
+  if (list_empty(&open_list)) {
+    return NULL;
+  }
+
+  // int lsize = list_size(&open_list);
 
   for(e = list_begin (&open_list); e != list_end (&open_list);
       e = list_next (e))
@@ -224,6 +264,10 @@ files_helper (int fd) {
       {
         return f;
       }
+      if (f->file_descriptor >= maxfd) {
+        break;
+      }
     }
   return NULL;
 }
+
