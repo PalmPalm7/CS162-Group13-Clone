@@ -108,23 +108,24 @@ syscall_handler (struct intr_frame *f)
   } 
 
   else if (args[0] == SYS_OPEN) {
-	 if (args[1] == NULL || !strcmp(args[1], "")) {
+    void* valid_adress = pagedir_get_page(pagedir, args[1]);
+	 if (valid_adress == NULL) {
 		  f->eax = -1;
-	  } else {
-      void* valid_adress = pagedir_get_page(pagedir, args[1]);
-      if (valid_adress == NULL) {
-        f->eax = -1;
-      } else {
-    		struct file *open_file = filesys_open(args[1]);
-    		if (open_file != NULL){
-  	  		struct file_info *f1 = create_files_struct(open_file);
-  	  		f1->file_name = args[1];
-  	  		list_push_back(&thread_current()->open_list, &f1->elem);
-  	  		f->eax = f1->file_descriptor;
-  		  } else {
-  			  f->eax = -1;
-  		  }
-      }
+      printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+      thread_exit();
+	  } else if (args[1] == NULL || !strcmp(args[1], "")) {
+      f->eax = -1;
+    } else {
+    	struct file *open_file = filesys_open(args[1]);
+    	if (open_file != NULL){
+    		struct file_info *f1 = create_files_struct(open_file);
+	  		f1->file_name = args[1];
+  	  	list_push_back(&thread_current()->open_list, &f1->elem);
+  	  	f->eax = f1->file_descriptor;
+  	  } else {
+  		  f->eax = -1;
+		  }
+      
 	  }
   }
 
@@ -262,10 +263,13 @@ files_helper (int fd) {
       f = list_entry (e, struct file_info, elem);
       if (f->file_descriptor == fd)
       {
+        if (f->file_descriptor == maxfd) {
+          thread_current()->fd_count = thread_current()->fd_count - 1;
+        }
         return f;
       }
       if (f->file_descriptor >= maxfd) {
-        break;
+        return NULL;
       }
     }
   return NULL;
