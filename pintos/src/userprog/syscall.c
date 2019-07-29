@@ -9,48 +9,60 @@
 #include "userprog/process.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "userprog/pagedir.h"
 
-struct file_info
-  {
-    int reader_count;
-    int file_descriptor;
-    const char *file_name;
-    struct file *file;
-    struct list_elem elem;
-  };
-
+extern struct lock exec_lock; /* ensure only one threads can run exec*/
 static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
 struct file_info* create_files_struct(struct file *open_file);
 int write (int fd, const void *buffer, unsigned length);
 int read (int fd, const void *buffer, unsigned length);
 int seek (int fd, unsigned length);
+void handle_exit(int ret_val);
+
+static int get_user (const uint8_t *uaddr);
+static bool put_user (uint8_t *udst, uint8_t byte);
 
 void
 syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+ 
+  lock_init(&exec_lock); 
 }
 
 static void
 syscall_handler (struct intr_frame *f)
 {
-	struct list open_list = thread_current()->open_list;
-	uint32_t* args = ((uint32_t*) f->esp);
-  if((int*)f->esp <= 0x08048000 ){
-    printf("%s: exit(%d)\n", &thread_current ()->name, -1);
-    thread_exit();
-  }
-  
-
+  struct list open_list = thread_current()->open_list;
+  uint32_t* args = ((uint32_t*) f->esp);
+  uint32_t* pagedir = thread_current()->pagedir;
+  if((int*)f->esp <= 0x08048000 )
+    {
+      handle_exit(-1);
+      thread_exit();
+    }
+   
   switch (args[0]) 
   {
+   case SYS_WAIT:
+     {
+       f -> eax = process_wait(args[1]);
+       break;
+     }
+   case SYS_EXEC:
+     {
+       f -> eax = handle_exec (args[1]); 
+       break;
+     }
    case SYS_EXIT:
      {
-        f->eax = args[1];
-        printf ("%s: exit(%d)\n", &thread_current ()->name, args[1]);
+        if((args+1) >= PHYS_BASE){
+        handle_exit(-1);
         thread_exit();
-        break;
+      }
+        handle_exit(args[1]);
+        thread_exit();
      }
    case SYS_PRACTICE:
      {
@@ -81,7 +93,19 @@ syscall_handler (struct intr_frame *f)
        }
     case SYS_CREATE:
     {
-      f->eax = filesys_create(args[1], args[2]);
+      if (args[1] == 0) {
+        f->eax = -1;
+        printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+        thread_exit();
+      } else {
+        void* valid_adress = pagedir_get_page(pagedir, args[1]);
+        if (valid_adress == NULL) {
+          f->eax = -1;
+          printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+          thread_exit();
+        }
+        f->eax = filesys_create(args[1], args[2]);
+      }
       break;
     } 
     case SYS_REMOVE: 
@@ -90,30 +114,31 @@ syscall_handler (struct intr_frame *f)
       break;
     } 
     case SYS_OPEN:
-    {
-	if (args[1] == NULL || !strcmp(args[1], "")) {
-		f->eax = -1;
-	} else {
-  		struct file *open_file = filesys_open(args[1]);
-  		if (open_file != NULL){
-	  		struct file_info *f1 = create_files_struct(open_file);
-	  		f1->file_name = args[1];
-	  		list_push_back(&thread_current()->open_list, &f1->elem);
-	  		f->eax = f1->file_descriptor;
-		} else {
-			f->eax = -1;
-		}
-	  }
+    {  if (args[1] == NULL || !strcmp(args[1], "")) {
+        f->eax = -1;
+      } else {
+        void* valid_adress = pagedir_get_page(pagedir, args[1]);
+        if (valid_adress == NULL) {
+          f->eax = -1;
+        } else {
+          struct file *open_file = filesys_open(args[1]);
+          if (open_file != NULL){
+            struct file_info *f1 = create_files_struct(open_file);
+            f1->file_name = args[1];
+            list_push_back(&thread_current()->open_list, &f1->elem);
+            f->eax = f1->file_descriptor;
+          } else {
+            f->eax = -1;
+          }
+        }
+      }
        break;
     }
 
     case SYS_WRITE: 
-     f->eax = write (args[1], (void *) args[2], args[3]);break;
-
-
-    case SYS_SEEK:
-      f->eax = seek (args[1], args[2]); break;
-	  
+     f->eax = write (args[1], (void *) args[2], args[3]);
+     break;
+    
     default:
     {
       // TODO: Find the current file
@@ -132,10 +157,15 @@ syscall_handler (struct intr_frame *f)
         f->eax = file_tell (curr_file->file);
 
       else if (args[0] == SYS_CLOSE) {
-    	file_close(curr_file->file);
-    	list_remove(&curr_file->elem);
-    	free(curr_file);
+      if (args[1] == 1 || args[1] == 2) {
+          f->eax = -1;
+        } else {
+        list_remove(&curr_file->elem);
+        file_close(curr_file->file);
+        free(curr_file);
+        }
       }
+
     }
   }
 }
@@ -194,11 +224,11 @@ unsigned tell (int fd)
 
 struct file_info*
 create_files_struct(struct file *open_file) {
-	struct file_info *f1 = malloc(sizeof(struct file_info));
-	f1->reader_count = 0;
-	f1->file_descriptor = find_fd();
-	f1->file = open_file;
-	return f1;
+  struct file_info *f1 = malloc(sizeof(struct file_info));
+  f1->reader_count = 0;
+  f1->file_descriptor = find_fd();
+  f1->file = open_file;
+  return f1;
 }
 
 struct file_info* 
@@ -218,4 +248,68 @@ files_helper (int fd) {
       }
     }
   return NULL;
+}
+
+void handle_exit(int ret_val)
+{
+  tid_t now_tid = thread_current () -> tid;
+  struct list_elem* e;
+  for (e = list_begin (&wait_list); e!=list_end (&wait_list);
+      e = list_next (e))
+    {
+      struct wait_status *status = list_entry(e,struct wait_status, elem);
+      if (status -> child_pid == now_tid)
+        {
+          status -> return_val = ret_val;
+          lock_acquire (&status -> ref_cnt_lock);
+          status -> ref_cnt --;
+          lock_release (&status -> ref_cnt_lock);
+          sema_up(&status -> end_p);
+        }
+      else if (status -> parent_pid == now_tid)/* parent process exit*/
+             {
+               lock_acquire (&status -> ref_cnt_lock);
+               status -> ref_cnt --;
+               lock_release (&status -> ref_cnt_lock);
+             }
+     if(status -> ref_cnt == 0)
+       {
+         e = list_remove(e);
+         free(status);
+       }
+     if(e == list_end(&wait_list))
+       break;
+     }
+   printf ("%s: exit(%d)\n", &thread_current ()->name, ret_val);
+}
+
+tid_t handle_exec(const char *cmd_line)
+{
+  if (cmd_line > PHYS_BASE || get_user (cmd_line) == -1) 
+    return -1;
+  tid_t child_tid;
+  child_tid = process_execute (cmd_line); 
+  return child_tid; 
+}
+
+/* Reads a byte at user virtual address UADDR.
+UADDR must be below PHYS_BASE.
+Returns the byte value if successful, -1 if a segfault
+occurred. */
+static int
+get_user (const uint8_t *uaddr)
+{
+  int result;
+  asm ("movl $1f, %0; movzbl %1, %0; 1:": "=&a" (result) : "m" (*uaddr));
+  return result;
+}
+/* Writes BYTE to user address UDST.
+UDST must be below PHYS_BASE.
+Returns true if successful, false if a segfault occurred. */
+static bool
+put_user (uint8_t *udst, uint8_t byte)
+{
+  int error_code;
+  asm ("movl $1f, %0; movb %b2, %1; 1:": "=&a" (error_code), "=m" (*udst) : "q" (byte));
+  return error_code != -1;
 }
