@@ -19,19 +19,21 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #define ARGUMENT_MAX_NUM 20
-extern struct semaphore temporary;
 int load_val;
- struct lock exec_lock;
+struct lock exec_lock;
+static struct semaphore temporary;
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 /* Last used fd */
+
 /* Find the next unused fd */
 int
 find_fd(void) 
 {
+  thread_current()->fd_count = thread_current()->fd_count + 1;
   int retval = thread_current()->fd_count;
-  thread_current()->fd_count++;
+
   return retval;
 }
 /* Starts a new thread running a user program loaded from
@@ -43,6 +45,8 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
+
+  sema_init (&temporary, 0);
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -111,6 +115,8 @@ start_process (void *file_name_)
     }
     load_val = 0;
     //sema_up(&temporary);
+    thread_exit ();
+
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -134,28 +140,10 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid)
+process_wait (tid_t child_tid UNUSED)
 {
-  tid_t now_tid = thread_current() -> tid;
-  struct wait_status *status;
-  struct list_elem *e;
-  for(e = list_begin (&wait_list); e != list_end (&wait_list);
-      e = list_next (e))
-    {
-      status = list_entry(e, struct wait_status, elem);
-      if(status -> child_pid == child_tid &&
-         status -> parent_pid == now_tid)
-        {
-          sema_down(&status -> end_p);
-          e = list_remove(e);
-          int ret_val = status -> return_val;
-          free (status);
-          return ret_val;
-        }
-      if(e == list_end (&wait_list))
-        break;
-    }
-  return -1;
+  sema_down (&temporary);
+  return 0;
 }
 
 /* Free the current process's resources. */
@@ -164,6 +152,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -180,6 +169,7 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+  sema_up (&temporary);
 }
 
 /* Sets up the CPU for running user code in the current
