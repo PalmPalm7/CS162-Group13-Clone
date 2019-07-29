@@ -30,8 +30,9 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 int
 find_fd(void) 
 {
+  thread_current()->fd_count = thread_current()->fd_count + 1;
   int retval = thread_current()->fd_count;
-  thread_current()->fd_count++;
+
   return retval;
 }
 /* Starts a new thread running a user program loaded from
