@@ -20,6 +20,8 @@ struct wait_status {
   struct lock ref_cnt_lock;
   struct list_elem elem;
 };
+
+
 /* status of all wait */
 struct list wait_list;
 

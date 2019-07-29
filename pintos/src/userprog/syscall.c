@@ -19,6 +19,8 @@ struct file_info
     struct list_elem elem;
   };
 
+struct lock exec_lock; /* ensure only one threads can run exec*/
+
 static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
 struct file_info* create_files_struct(struct file *open_file);
@@ -27,10 +29,15 @@ int read (int fd, const void *buffer, unsigned length);
 int seek (int fd, unsigned length);
 void handle_exit(int ret_val);
 
+static int get_user (const uint8_t *uaddr);
+static bool put_user (uint8_t *udst, uint8_t byte);
+
 void
 syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+ 
+  lock_init(&exec_lock); 
 }
 
 static void
@@ -40,11 +47,10 @@ syscall_handler (struct intr_frame *f)
 	uint32_t* args = ((uint32_t*) f->esp);
   if((int*)f->esp <= 0x08048000 )
     {
-      printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+      handle_exit(-1);
       thread_exit();
     }
-  
-
+   
   switch (args[0]) 
   {
    case SYS_WAIT:
@@ -266,9 +272,33 @@ void handle_exit(int ret_val)
 
 tid_t handle_exec(const char *cmd_line)
 {
+  if (cmd_line > PHYS_BASE || get_user (cmd_line) == -1) 
+    return -1;
   tid_t child_tid;
-  child_tid = process_execute(cmd_line); 
-  if(child_tid == TID_ERROR)
-    return child_tid;
+  lock_acquire (&exec_lock);
+  child_tid = process_execute (cmd_line); 
+  lock_release (&exec_lock);
   return child_tid; 
+}
+
+/* Reads a byte at user virtual address UADDR.
+UADDR must be below PHYS_BASE.
+Returns the byte value if successful, -1 if a segfault
+occurred. */
+static int
+get_user (const uint8_t *uaddr)
+{
+  int result;
+  asm ("movl $1f, %0; movzbl %1, %0; 1:": "=&a" (result) : "m" (*uaddr));
+  return result;
+}
+/* Writes BYTE to user address UDST.
+UDST must be below PHYS_BASE.
+Returns true if successful, false if a segfault occurred. */
+static bool
+put_user (uint8_t *udst, uint8_t byte)
+{
+  int error_code;
+  asm ("movl $1f, %0; movb %b2, %1; 1:": "=&a" (error_code), "=m" (*udst) : "q" (byte));
+  return error_code != -1;
 }
