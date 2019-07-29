@@ -36,11 +36,9 @@ syscall_handler (struct intr_frame *f)
 	uint32_t* args = ((uint32_t*) f->esp);
   uint32_t* pagedir = thread_current()->pagedir;
   if((int*)f->esp <= 0x08048000 ){
-    printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+    handle_exit(-1);
     thread_exit();
   }
-  
-
 
   switch (args[0]) {
     case SYS_EXIT:
