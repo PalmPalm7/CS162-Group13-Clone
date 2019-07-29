@@ -75,14 +75,14 @@ void exit(int status)
 pid_t exec(const char *cmd_line)
 int wait(pid_t pid)
 
-/*in thread.c and thread.h*/
+/*in process.h*/
 struct wait_status {
   int return_val;
   tid_t child_pid;
   tid_t parent_pid;
-  struct semaphore end;
+  struct semaphore end_p;
   int ref_cnt;
-  lock ref_cnt lock;
+  struct lock ref_cnt_lock;
   struct list_elem elem;
 }
 
@@ -98,7 +98,7 @@ tid_t process_execute(const char *file_name)
 in `syscall_handler`, we put every syscalls in an `switch case` statement,which then calls seperate function to handle.
 since we already have all the syacall code defined in `syscall-nr.h`, we can just use them in `syacall_handler`
 
-in `practice` function, we will just use `return i++;` then the lib function will take care of the rest of things 
+in `practice` function, we will just use `return ++i;` then set eax to correct value
 
 in `halt` function, we can just call `shutdown_power_off()`
 
