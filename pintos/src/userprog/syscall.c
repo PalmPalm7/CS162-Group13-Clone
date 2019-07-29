@@ -43,82 +43,82 @@ syscall_handler (struct intr_frame *f)
 
 
   switch (args[0]) {
-
-    case SYS_READ:
-    case SYS_WRITE:
-
-
-
-    case SYS_CREATE:
-    case SYS_SEEK:
     case SYS_EXIT:
-    case SYS_REMOVE:
-    case SYS_OPEN:
-    case SYS_FILESIZE:
-    case SYS_TELL:
-    case SYS_CLOSE:
-      break;
-    default:
-    thread_exit();
-    return;
-  }
-
-  switch (args[0]) {
-    case SYS_CREATE:
-    case SYS_REMOVE:
-    case SYS_OPEN:
-      break;
-    case SYS_WRITE:
-    case SYS_READ:
-      break;
-  } if (args[0] == SYS_EXIT) {
-      if((args+1) >= PHYS_BASE){
-        printf("%s: exit(%d)\n", &thread_current ()->name, -1);
-        thread_exit ();
+      {
+         f->eax = args[1];
+         handle_exit(args[1]);
+         thread_exit();
+         break;
       }
-      f->eax = args[1];
-      printf("%s: exit(%d)\n", &thread_current ()->name, args[1]);
-      thread_exit();
-  } else if (args[0] == SYS_EXEC) {
-    f->eax = handle_exec (args[1]); 
-  } else if (args[0] == SYS_WAIT) {
-    f->eax = process_wait(args[1]);
-  } else if (args[0] == SYS_PRACTICE) {
-    f->eax =  args[1] + 1;
-  } else if (args[0] == SYS_HALT) {
-    shutdown_power_off();
-  } else if (args[0] == SYS_READ && args[1] == 0) {
-    uint8_t *buffer = (uint8_t*) args[2];
-    int i = 0;
-    while (i < args[3]) {
-      buffer[i] = input_getc ();
-      if (buffer[i++] == '\n')
+    case SYS_EXEC: 
+      {
+        f->eax = handle_exec (args[1]); 
         break;
-    }
-    f->eax = i;
-  } 
-
-	else if (args[0] == SYS_CREATE) {
-    if (args[1] == 0) {
-      f->eax = -1;
-      printf("%s: exit(%d)\n", &thread_current ()->name, -1);
-      thread_exit();
-    } else {
-      void* valid_adress = pagedir_get_page(pagedir, args[1]);
-      if (valid_adress == NULL) {
-        f->eax = -1;
-        printf("%s: exit(%d)\n", &thread_current ()->name, -1);
-        thread_exit();
+      } 
+    case SYS_WAIT:
+      {
+        f->eax = process_wait(args[1]);
+        break;
+      } 
+    case SYS_PRACTICE:
+      {
+        f->eax =  args[1] + 1;
+        break;
       }
+    case SYS_HALT: 
+      {
+        shutdown_power_off();
+      }
+    case SYS_READ:
+      {
+        if( args[1] == 0) 
+          {
+            uint8_t *buffer = (uint8_t*) args[2];
+            int i = 0;
+            while (i < args[3]) 
+              {
+                 buffer[i] = input_getc ();
+                if (buffer[i++] == '\n')
+                  break;
+              }
+            f->eax = i;
+          }
+        else
+          f->eax = read (args[1], (void *) args[2], args[3]);
+         break;
+     } 
 
-  		f->eax = filesys_create(args[1], args[2]);
-    }
+    case SYS_CREATE: 
+     {
+       if (args[1] == 0) 
+         {
+           f->eax = -1;
+           printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+           thread_exit();
+         } 
+       else 
+         {
+           void* valid_adress = pagedir_get_page(pagedir, args[1]);
+           if (valid_adress == NULL) 
+             {
+               f->eax = -1;
+               printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+               thread_exit();
+             }
 
-  } else if (args[0] == SYS_REMOVE) {
-  		f->eax = filesys_remove(args[1]);
-  } 
+  	   f->eax = filesys_create(args[1], args[2]);
+         }
+        break;
 
-  else if (args[0] == SYS_OPEN) {
+     }
+   case SYS_REMOVE: 
+    {
+      f->eax = filesys_remove(args[1]);
+      break;
+    } 
+
+  case SYS_OPEN: 
+   {
     void* valid_adress = pagedir_get_page(pagedir, args[1]);
 	 if (valid_adress == NULL) {
 		  f->eax = -1;
@@ -138,44 +138,46 @@ syscall_handler (struct intr_frame *f)
 		  }
       
 	  }
-  }
-
-  else if (args[0] == SYS_WRITE){
-     f->eax = write (args[1], (void *) args[2], args[3]);
- }
-
-  else if (args[0] == SYS_READ){
-      f->eax = read (args[1], (void *) args[2], args[3]);
-  }
-
-  else if (args[0] == SYS_SEEK)
-    f->eax = seek (args[1], args[2]);
-	  
-  else {
-    // TODO: Find the current file
-    struct file_info *curr_file = files_helper (args[1]);
-    if (curr_file == NULL)
-      f->eax = -1;
-
-    else if (args[0] == SYS_FILESIZE)
-      f->eax = file_length (curr_file->file);
-  
-
-    else if (args[0] == SYS_SEEK)
-      file_seek (curr_file->file, args[2]);
-
-    else if (args[0] == SYS_TELL)
-      f->eax = file_tell (curr_file->file);
-
-    else if (args[0] == SYS_CLOSE) {
-      if (args[1] == 1 || args[1] == 2) {
-        f->eax = -1;
-      } else {
-      list_remove(&curr_file->elem);
-  	  file_close(curr_file->file);
-  	  free(curr_file);
-      }
     }
+
+  case SYS_WRITE:
+    {
+       f->eax = write (args[1], (void *) args[2], args[3]);
+       break;
+    }
+
+  case SYS_SEEK:
+    {
+      f->eax = seek (args[1], args[2]);
+      break;
+    }	  
+   default:
+    {
+      // TODO: Find the current file
+      struct file_info *curr_file = files_helper (args[1]);
+      if (curr_file == NULL)
+        f->eax = -1;
+  
+      else if (args[0] == SYS_FILESIZE)
+        f->eax = file_length (curr_file->file);
+    
+  
+      else if (args[0] == SYS_SEEK)
+        file_seek (curr_file->file, args[2]);
+  
+      else if (args[0] == SYS_TELL)
+        f->eax = file_tell (curr_file->file);
+  
+      else if (args[0] == SYS_CLOSE) {
+        if (args[1] == 1 || args[1] == 2) {
+          f->eax = -1;
+        } else {
+        list_remove(&curr_file->elem);
+    	  file_close(curr_file->file);
+    	  free(curr_file);
+        }
+      }
+   }
   }
 }
 
