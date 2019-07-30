@@ -103,7 +103,7 @@ syscall_handler (struct intr_frame *f)
        if (args[1] == 0) 
          {
            f->eax = -1;
-           printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+           handle_exit(-1);
            thread_exit();
          } 
        else 
@@ -112,7 +112,7 @@ syscall_handler (struct intr_frame *f)
            if (valid_adress == NULL) 
              {
                f->eax = -1;
-               printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+               handle_exit(-1);
                thread_exit();
              }
 
