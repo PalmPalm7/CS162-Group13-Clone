@@ -6,8 +6,8 @@ Final Report for Project 2: User Programs
 ## Process Control Syscalls
 
 While trying to implement the ideas outlined in the design document, it was determined that many of the simpler functions, such as `practice` and `halt`, could be implemented inline. Additionally, `exec` and `exit` already exist as functions in the skeleton code, so it was necessary to name the syscall functionality for those commands `handle_exec` and `handle_exit` respectively within syscall.c.
-To ensure wait twice will not causes thread block, we free the wait status as soon as the `sema_down` has completed.Everytime we use `handle_exit` before a `thread_exit` to ensure the wait status is correctly released, so that the kernel thread can end normally
-Dealing with `exec` syscall, we use one semaphore `end_l` and one lock `exec_lock` to synchrnoize loading status of child process. Since dealing with the load status is not carefully thought during our design phrase, this is a modification on design.
+To ensure wait twice would not cause threads to block, it was important to free the wait status as soon as the `sema_down` was completed. Everytime `handle_exit` was used before a `thread_exit` to ensure the wait status was correctly released and the kernel thread can exit normally.
+Dealing with the `exec` syscall one semaphore `end_l` and one lock `exec_lock` were integrated to synchrnoize loading the status of a child process. Previously, the plan for dealing with the load status was not fully developed.
 
 ## File Operation Syscalls
 
@@ -25,4 +25,4 @@ Handi handled the write, read, seek, filesize, and tell syscalls.  He also helpe
 Gary focused on creating the argument handler and the student testing code and report.  He also filled in with various other tasks as needed and wrote the Argument Handler section of the documents.
 Everybody put significant effort into integrating the code between the various tasks.
 
-The group certainly had a tendency to get the majority of the work done close to the deadline for a given part, much more so than in project 1. This is mainly because we have have a midtern on the first week, and design doc are not so fully prepared to working on the project. It will be better to try to spread out the work across the two weeks, while things are not getting so well.  Meeting in person to work on implementing the code seemed to be a particularly effective strategy despite mostly doing so out of necessity.  Furthermore, the group had encountered a few issues with git and should try to make sure that no issues arise due to improper use of git in the future.
+The group certainly had a tendency to get the majority of the work done close to the deadline for a given part, much more so than in project 1. This is largely due to a midterm during the first week and the group was not fully prepared to work on the project. It will be better to try to spread out the work across the two weeks, while things are not getting so well.  Meeting in person to work on implementing the code seemed to be a particularly effective strategy despite mostly doing so out of necessity.  Furthermore, the group had encountered a few issues with git and should try to make sure that no issues arise due to improper use of git in the future.
