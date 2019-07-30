@@ -2,6 +2,7 @@ Final Report for Project 2: User Programs
 =========================================
 
 ## Argument Passing
+if any use level thread is created it have to call the function `load` to load the elf32 format executable file which also call the function `setup_stack` to set the stack pointer which currently do not pass any arguments.What we do is basically adjusting the stack pointer and passing the argumet.Specifically we use the thread-safe function `strtok_r` to retrieve the argument in variable `file_name` and every time we pass the argument , we substract the length of string and copy this string to the stack. And we also record the pointer of the string and after we insert the string we insert the pointer  with the order from right to left. Finally we pass the number of the arugments and the  indirect pointer onto the stack.
 
 ## Process Control Syscalls
 
@@ -14,6 +15,99 @@ Dealing with `exec` syscall, we use one semaphore `end_l` and one lock `exec_loc
 It was not mentioned in the design document, but the file descriptor and list of open file descriptors needed to be exclusive to each thread.  In order to accomodate this, they were created as additional members of the existing thread struct in thread.h.  It was also necessary to add multiple checks to make sure the syscall arguments themselves were valid. After the design review, the idea of complicated synchronization attempts such as waiting for a file to be created before attempting to perform any operations on it or individual locks for each file was thrown out in favor of a global lock.  Read and write syscall implementations were substantially modified in order to allow access to `stdin` and `stdout`.  A new function called `files_helper` was added to look through the list of open file descriptors and return the `file_info` struct for the correct file. 
 
 ## Student Testing Report
+So we create two test case to test the tell and seek.
+First is `seek-and-tell.c` which is test the basic function of seek and tell.
+We use `seek` to move the file pointer and use `tell` if the file pointer is moved or not.
+
+seek-and-tell.output
+`
+Copying tests/userprog/seek-and-tell to scratch partition...
+qemu -hda /tmp/d70x2WKV1R.dsk -m 4 -net none -nographic -monitor null
+PiLo hda1
+Loading..........
+Kernel command line: -q -f extract run seek-and-tell
+Pintos booting with 4,088 kB RAM...
+382 pages available in kernel pool.
+382 pages available in user pool.
+Calibrating timer...  366,592,000 loops/s.
+hda: 5,040 sectors (2 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 167 sectors (83 kB), Pintos OS kernel (20)
+hda2: 4,096 sectors (2 MB), Pintos file system (21)
+hda3: 102 sectors (51 kB), Pintos scratch (22)
+filesys: using hda2
+scratch: using hda3
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'seek-and-tell' into the file system...
+Erasing ustar archive...
+Executing 'seek-and-tell':
+(seek-and-tell) begin
+(seek-and-tell) create test.data
+(seek-and-tell) open test.data
+(seek-and-tell) current position is 5 bytes
+(seek-and-tell) end
+seek-and-tell: exit(0)
+Execution of 'seek-and-tell' complete.
+Timer: 58 ticks
+Thread: 0 idle ticks, 57 kernel ticks, 1 user ticks
+hda2 (filesys): 87 reads, 213 writes
+hda3 (scratch): 101 reads, 2 writes
+Console: 1021 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...
+`
+seek-and-tell.result
+`
+PASS
+`
+
+
+second is `seek-big` which we move the file pointer out of the size of file and test if tell could return the right file pointer postion.
+seek-big.output
+`
+Copying tests/userprog/seek-big to scratch partition...
+qemu -hda /tmp/bmmRVIB_lt.dsk -m 4 -net none -nographic -monitor null
+PiLo hda1
+Loading..........
+Kernel command line: -q -f extract run seek-big
+Pintos booting with 4,088 kB RAM...
+382 pages available in kernel pool.
+382 pages available in user pool.
+Calibrating timer...  419,020,800 loops/s.
+hda: 5,040 sectors (2 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 167 sectors (83 kB), Pintos OS kernel (20)
+hda2: 4,096 sectors (2 MB), Pintos file system (21)
+hda3: 102 sectors (51 kB), Pintos scratch (22)
+filesys: using hda2
+scratch: using hda3
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'seek-big' into the file system...
+Erasing ustar archive...
+Executing 'seek-big':
+(seek-big) begin
+(seek-big) create test.data
+(seek-big) open test.data
+(seek-big) current position is 21 bytes
+(seek-big) end
+seek-big: exit(0)
+Execution of 'seek-big' complete.
+Timer: 56 ticks
+Thread: 0 idle ticks, 55 kernel ticks, 1 user ticks
+hda2 (filesys): 87 reads, 213 writes
+hda3 (scratch): 101 reads, 2 writes
+Console: 972 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...
+`
+seek-big.result
+`
+PASS
+`
 
 
 

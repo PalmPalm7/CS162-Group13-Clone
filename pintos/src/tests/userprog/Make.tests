@@ -3,19 +3,20 @@
 tests/%.output: FILESYSSOURCE = --filesys-size=2
 tests/%.output: PUTFILES = $(filter-out kernel.bin loader.bin, $^)
 
-tests/userprog_TESTS = $(addprefix tests/userprog/,seek-and-tell args-none		\
-args-single args-multiple args-many args-dbl-space sc-bad-sp		\
+tests/userprog_TESTS = $(addprefix tests/userprog/,seek-and-tell seek-big args-none    \
+args-single args-multiple args-many args-dbl-space  sc-bad-sp		\
 sc-bad-arg sc-boundary sc-boundary-2 halt exit create-normal		\
 create-empty create-null create-bad-ptr create-long create-exists	\
 create-bound open-normal open-missing open-boundary open-empty		\
-open-null open-bad-ptr open-twice close-normal close-twice close-stdin	\
+open-null open-bad-ptr open-twice close-normal close-twice close-stdin  \
 close-stdout close-bad-fd read-normal read-bad-ptr read-boundary	\
 read-zero read-stdout read-bad-fd write-normal write-bad-ptr		\
-write-boundary write-zero write-stdin write-bad-fd exec-once exec-arg	\
+write-boundary write-zero write-stdin write-bad-fd exec-once exec-arg   \
 exec-multiple exec-missing exec-bad-ptr wait-simple wait-twice		\
 wait-killed wait-bad-pid multi-recurse multi-child-fd rox-simple	\
-rox-child rox-multichild bad-read bad-write bad-read2 bad-write2        \
+rox-child rox-multichild bad-read bad-write bad-read2 bad-write2    \
 bad-jump bad-jump2 iloveos practice )
+
 
 tests/userprog_PROGS = $(tests/userprog_TESTS) $(addprefix \
 tests/userprog/,child-simple child-args child-bad child-close child-rox)
@@ -26,6 +27,7 @@ tests/userprog/args-none_SRC = tests/userprog/args.c
 tests/userprog/args-single_SRC = tests/userprog/args.c
 tests/userprog/args-multiple_SRC = tests/userprog/args.c
 tests/userprog/args-many_SRC = tests/userprog/args.c
+tests/userprog/seek-big_SRC = tests/userprog/seek-big.c tests/main.c
 tests/userprog/args-dbl-space_SRC = tests/userprog/args.c
 tests/userprog/sc-bad-sp_SRC = tests/userprog/sc-bad-sp.c tests/main.c
 tests/userprog/sc-bad-arg_SRC = tests/userprog/sc-bad-arg.c tests/main.c
