@@ -35,7 +35,7 @@ syscall_handler (struct intr_frame *f)
 	struct list open_list = thread_current()->open_list;
 	uint32_t* args = ((uint32_t*) f->esp);
   uint32_t* pagedir = thread_current()->pagedir;
-  if((int*)f->esp <= 0x08048000 ){
+  if((int*)f->esp <= 0x08048000 ||(args+1 >= PHYS_BASE)){
     handle_exit(-1);
     thread_exit();
   }
@@ -117,25 +117,34 @@ syscall_handler (struct intr_frame *f)
 
   case SYS_OPEN: 
    {
-    void* valid_adress = pagedir_get_page(pagedir, args[1]);
-	 if (valid_adress == NULL) {
-		  f->eax = -1;
-      printf("%s: exit(%d)\n", &thread_current ()->name, -1);
-      thread_exit();
-	  } else if (args[1] == NULL || !strcmp(args[1], "")) {
-      f->eax = -1;
-    } else {
-    	struct file *open_file = filesys_open(args[1]);
-    	if (open_file != NULL){
-    		struct file_info *f1 = create_files_struct(open_file);
-	  		f1->file_name = args[1];
-  	  	list_push_back(&thread_current()->open_list, &f1->elem);
-  	  	f->eax = f1->file_descriptor;
-  	  } else {
-  		  f->eax = -1;
-		  }
+     void* valid_adress = pagedir_get_page(pagedir, args[1]);
+     if (valid_adress == NULL) 
+       {
+         f->eax = -1;
+         handle_exit(-1);
+         thread_exit();
+       } 
+     else if (args[1] == NULL || !strcmp(args[1], "")) 
+       {
+         f->eax = -1;
+       } 
+     else 
+       {
+         struct file *open_file = filesys_open(args[1]);
+    	  if (open_file != NULL)
+            {
+    	      struct file_info *f1 = create_files_struct (open_file);
+	      f1->file_name = args[1];
+  	      list_push_back (&thread_current()->open_list, &f1->elem);
+  	      f->eax = f1->file_descriptor;
+  	    } 
+          else 
+            {
+              f->eax = -1;
+             }
       
-	  }
+        }
+      break;
     }
 
   case SYS_WRITE:
@@ -166,15 +175,19 @@ syscall_handler (struct intr_frame *f)
       else if (args[0] == SYS_TELL)
         f->eax = file_tell (curr_file->file);
   
-      else if (args[0] == SYS_CLOSE) {
-        if (args[1] == 1 || args[1] == 2) {
-          f->eax = -1;
-        } else {
-        list_remove(&curr_file->elem);
-    	  file_close(curr_file->file);
-    	  free(curr_file);
+      else if (args[0] == SYS_CLOSE) 
+             {
+               if (args[1] == 1 || args[1] == 2) 
+                 {
+                   f->eax = -1;
+                 }
+       else 
+       {
+         list_remove(&curr_file->elem);
+    	 file_close(curr_file->file);
+    	 free(curr_file);
         }
-      }
+            }
    }
   }
 }
