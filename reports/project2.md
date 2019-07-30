@@ -2,7 +2,7 @@ Final Report for Project 2: User Programs
 =========================================
 
 ## Argument Passing
-if any use level thread is created it have to call the function `load` to load the elf32 format executable file which also call the function `setup_stack` to set the stack pointer which currently do not pass any arguments.What we do is basically adjusting the stack pointer and passing the argumet.Specifically we use the thread-safe function `strtok_r` to retrieve the argument in variable `file_name` and every time we pass the argument , we substract the length of string and copy this string to the stack. And we also record the pointer of the string and after we insert the string we insert the pointer  with the order from right to left. Finally we pass the number of the arugments and the  indirect pointer onto the stack.
+If any user level thread is created, it will have to call the function `load` to load the elf32 format executable file which also calls the function `setup_stack` to set the stack pointer which currently does not pass any arguments.  What we do is basically adjusting the stack pointer and passing the argumet.  Specifically we use the thread-safe function `strtok_r` to retrieve the argument in variable `file_name` and every time we pass the argument , we substract the length of string and copy this string to the stack. And we also record the pointer of the string and after we insert the string we insert the pointer  with the order from right to left. Finally we pass the number of the arugments and the  indirect pointer onto the stack.
 
 ## Process Control Syscalls
 
