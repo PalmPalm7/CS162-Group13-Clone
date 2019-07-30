@@ -176,16 +176,16 @@ syscall_handler (struct intr_frame *f)
         f->eax = file_length (curr_file->file);
     
   
-      else if (args[0] == SYS_SEEK){
+      else if (args[0] == SYS_SEEK)
         file_seek (curr_file->file, args[2]);
-      }
         
   
-      else if (args[0] == SYS_TELL){
-        int test = file_tell (curr_file->file);
-         f->eax = test;
+      else if (args[0] == SYS_TELL)
+        {
+          int test = file_tell (curr_file->file);
+          f->eax = test;
 
-      }
+        }
        
   
       else if (args[0] == SYS_CLOSE) 
@@ -194,14 +194,14 @@ syscall_handler (struct intr_frame *f)
                  {
                    f->eax = -1;
                  }
-       else 
-       {
-         list_remove(&curr_file->elem);
-    	 file_close(curr_file->file);
-    	 free(curr_file);
-        }
+               else 
+                {
+                  list_remove(&curr_file->elem);
+    	          file_close(curr_file->file);
+    	          free(curr_file);
+                 }
             }
-   }
+    }
   }
 }
 
@@ -220,7 +220,7 @@ int read (int fd, const void *buffer, unsigned length)
     }
   }
   if (!is_user_vaddr(buffer) || buffer == NULL) {
-    printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+    handle_exit(-1);
     thread_exit();
   } else {
   struct file_info *curr_file = files_helper (fd);
@@ -242,7 +242,7 @@ int write (int fd, const void *buffer, unsigned length)
   }
   void* valid_adress = pagedir_get_page(pagedir, buffer);
   if (valid_adress == NULL) {
-    printf("%s: exit(%d)\n", &thread_current ()->name, -1);
+    handle_exit(-1);
     thread_exit();
   } else {
   struct file_info *curr_file = files_helper (fd);
