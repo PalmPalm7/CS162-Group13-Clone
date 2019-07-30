@@ -152,12 +152,7 @@ syscall_handler (struct intr_frame *f)
        f->eax = write (args[1], (void *) args[2], args[3]);
        break;
     }
-
-  case SYS_SEEK:
-    {
-      f->eax = seek (args[1], args[2]);
-      break;
-    }	  
+ 
    default:
     {
       // TODO: Find the current file
@@ -169,11 +164,17 @@ syscall_handler (struct intr_frame *f)
         f->eax = file_length (curr_file->file);
     
   
-      else if (args[0] == SYS_SEEK)
+      else if (args[0] == SYS_SEEK){
         file_seek (curr_file->file, args[2]);
+      }
+        
   
-      else if (args[0] == SYS_TELL)
-        f->eax = file_tell (curr_file->file);
+      else if (args[0] == SYS_TELL){
+        int test = file_tell (curr_file->file);
+         f->eax = test;
+
+      }
+       
   
       else if (args[0] == SYS_CLOSE) 
              {
