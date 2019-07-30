@@ -56,8 +56,13 @@ syscall_handler (struct intr_frame *f)
          break;
       }
     case SYS_EXEC: 
-      {
-        f->eax = handle_exec (args[1]); 
+      { 
+        if(pagedir_get_page (pagedir, args[1]) == NULL)
+         {
+           handle_exit(-1);
+           thread_exit();
+         }
+         f->eax = handle_exec (args[1]); 
         break;
       } 
     case SYS_WAIT:
