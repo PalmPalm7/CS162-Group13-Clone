@@ -32,8 +32,8 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f)
 {
-	struct list open_list = thread_current()->open_list;
-	uint32_t* args = ((uint32_t*) f->esp);
+  struct list open_list = thread_current()->open_list;
+  uint32_t* args = ((uint32_t*) f->esp);
   uint32_t* pagedir = thread_current()->pagedir;
   if((int*)f->esp <= 0x08048000 ||(args+1 >= PHYS_BASE))
     {
@@ -45,7 +45,7 @@ syscall_handler (struct intr_frame *f)
       handle_exit(-1);
       thread_exit();
     } 
- 
+
   switch (args[0]) 
   {
     case SYS_EXIT:
@@ -129,8 +129,13 @@ syscall_handler (struct intr_frame *f)
 
   case SYS_OPEN: 
    {
+     if(!is_user_vaddr(args[1]))
+     { 
+        handle_exit(-1);
+        thread_exit();
+     }
      void* valid_adress = pagedir_get_page(pagedir, args[1]);
-     if (valid_adress == NULL) 
+     if (valid_adress == NULL ) 
        {
          f->eax = -1;
          handle_exit(-1);
