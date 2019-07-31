@@ -102,6 +102,7 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
     int fd_count;
     struct list open_list;
+    struct file* exec_file;
 #endif
 
     /* Owned by thread.c. */
