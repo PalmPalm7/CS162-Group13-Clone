@@ -147,6 +147,11 @@ syscall_handler (struct intr_frame *f)
        } 
      else 
        {
+         if (strstr (args[1], ".") == NULL)
+           {
+             f->eax = -1;
+             return ;
+           }
          struct file *open_file = filesys_open(args[1]);
     	  if (open_file != NULL)
             {
@@ -224,16 +229,19 @@ int read (int fd, const void *buffer, unsigned length)
       return 0;
     }
   }
-  if (!is_user_vaddr(buffer) || buffer == NULL) {
-    handle_exit(-1);
-    thread_exit();
-  } else {
-  struct file_info *curr_file = files_helper (fd);
-  if (curr_file == NULL)
-    return -1;
-  int ret = file_read(curr_file->file, buffer, length);
-  return ret;
-  }
+  if (!is_user_vaddr(buffer) || buffer == NULL) 
+    {
+      handle_exit(-1);
+      thread_exit();
+    } 
+  else 
+    {
+      struct file_info *curr_file = files_helper (fd);
+      if (curr_file == NULL)
+      return -1;
+      int ret = file_read(curr_file->file, buffer, length);
+      return ret;
+    }
 }
 
 int write (int fd, const void *buffer, unsigned length)
@@ -249,13 +257,15 @@ int write (int fd, const void *buffer, unsigned length)
   if (valid_adress == NULL) {
     handle_exit(-1);
     thread_exit();
-  } else {
-  struct file_info *curr_file = files_helper (fd);
-  if(curr_file == NULL)
-    return -1;
-  int ret = file_write(curr_file->file, buffer, length);
-  return ret;
   } 
+  else 
+    {
+      struct file_info *curr_file = files_helper (fd);
+      if (curr_file == NULL)
+        return -1;
+      int ret = file_write(curr_file->file, buffer, length);
+      return ret;
+    } 
 }
 
 int seek (int fd, unsigned length)
