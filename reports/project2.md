@@ -114,7 +114,7 @@ PASS
 ## Reflection and improvment
 
 Josh handled the open, close, create, and remove syscalls as well as the invalid argument checking for all file operation syscalls. Josh also worked on the File Operation Syscalls section of the documents and polishing the design document and final report. 
-Zuxin worked on implementing the process control syscalls as well as planning and writing the Process Control Syscalls portion of the documents.
+Zuxin worked on implementing the process control syscalls as well as planning and writing the Process Control Syscalls portion of the documents, and protection from writing and openning executable.
 Handi handled the write, read, seek, filesize, and tell syscalls.  He also helped with planning the file operation syscall implementation.
 Gary focused on creating the argument handler and the student testing code and report.  He also filled in with various other tasks as needed and wrote the Argument Handler section of the documents.
 Everybody put significant effort into integrating the code between the various tasks.
