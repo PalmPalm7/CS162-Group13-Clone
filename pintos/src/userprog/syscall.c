@@ -22,7 +22,7 @@ tid_t handle_exec(const char *cmd_line);
 static int get_user (const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
-bool executable_validation(struct file* file);
+static void clear_all_file();
 
 void
 syscall_init (void)
@@ -160,7 +160,7 @@ syscall_handler (struct intr_frame *f)
           else 
             {
               f->eax = -1;
-             }
+            }
       
         }
       break;
@@ -283,13 +283,14 @@ unsigned tell (int fd)
 }
 
 struct file_info*
-create_files_struct(struct file *open_file) {
-	struct file_info *f1 = malloc(sizeof(struct file_info));
-	f1->reader_count = 0;
-	f1->file_descriptor = find_fd();
-	f1->file = open_file;
+create_files_struct(struct file *open_file) 
+{
+  struct file_info *f1 = malloc(sizeof(struct file_info));
+  f1->reader_count = 0;
+  f1->file_descriptor = find_fd();
+  f1->file = open_file;
   f1->removed = false;
-	return f1;
+  return f1;
 }
 
 struct file_info* 
@@ -355,37 +356,33 @@ handle_exit(int ret_val)
      if(e == list_end(&wait_list))
        break;
      }
+   clear_all_file();
    printf ("%s: exit(%d)\n", &thread_current ()->name, ret_val);
 }
 
 tid_t 
 handle_exec(const char *cmd_line)
 {
-  if (cmd_line > PHYS_BASE || get_user (cmd_line) == -1) 
+  if (cmd_line > PHYS_BASE) 
     return -1;
   tid_t child_tid;
   child_tid = process_execute (cmd_line); 
   return child_tid; 
 }
 
-/* Reads a byte at user virtual address UADDR.
-UADDR must be below PHYS_BASE.
-Returns the byte value if successful, -1 if a segfault
-occurred. */
-static int
-get_user (const uint8_t *uaddr)
+
+void clear_all_file()
 {
-  int result;
-  asm ("movl $1f, %0; movzbl %1, %0; 1:": "=&a" (result) : "m" (*uaddr));
-  return result;
-}
-/* Writes BYTE to user address UDST.
-UDST must be below PHYS_BASE.
-Returns true if successful, false if a segfault occurred. */
-static bool
-put_user (uint8_t *udst, uint8_t byte)
-{
-  int error_code;
-  asm ("movl $1f, %0; movb %b2, %1; 1:": "=&a" (error_code), "=m" (*udst) : "q" (byte));
-  return error_code != -1;
+  struct thread *t = thread_current();
+  struct list_elem* e;
+  for(e = list_begin(&(t -> open_list)); e != list_end((&t -> open_list));
+      e = list_next(e))
+    {
+      struct file_info* fi = list_entry(e, struct file_info, elem);
+      e = list_remove(e);
+      file_close(fi-> file);
+      free(fi);
+      if(e == list_end((&t -> open_list)))
+        return ;
+    }
 }
