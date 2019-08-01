@@ -4,7 +4,7 @@ Design Document for Project 3: File System
 ## Group Members
 
 * Josh Alexander <josh.alexander1315@berkeley.edu>
-* FirstName LastName <email@domain.example>
+* Zuxin Li <lizx2019@berkeley.edu>
 * FirstName LastName <email@domain.example>
 * FirstName LastName <email@domain.example>
 
@@ -24,7 +24,22 @@ struct inode_disk
 
 One new function will be added:
 ```
-void place_file_in_inode(int file_size, char* inode_array);
+void place_file_in_inode(int file_size, char* inode_array); 
+```
+
+And several functions will be modified:
+
+```
+/* split the data in buffer into different blocks*/ 
+
+off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size, off_t offset);
+
+/*read from blocks and indirect blocks, then put them together in the buffer*/
+
+off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
+
+
+
 ```
 
 ### Algorithms
