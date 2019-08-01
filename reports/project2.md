@@ -2,24 +2,24 @@ Final Report for Project 2: User Programs
 =========================================
 
 ## Argument Passing
-If any user level thread is created, it will have to call the function `load` to load the elf32 format executable file which also calls the function `setup_stack` to set the stack pointer which currently does not pass any arguments.  What we do is basically adjusting the stack pointer and passing the argumet.  Specifically we use the thread-safe function `strtok_r` to retrieve the argument in variable `file_name` and every time we pass the argument , we substract the length of string and copy this string to the stack. And we also record the pointer of the string and after we insert the string we insert the pointer  with the order from right to left. Finally we pass the number of the arugments and the  indirect pointer onto the stack.
+If any user level thread is created, it will have to call the function `load` to load the elf32 format executable file which also calls the function `setup_stack` to set the stack pointer which currently does not pass any arguments. The stack pointer is adjusted before passing the argumet.  Specifically the thread-safe function `strtok_r` is used to retrieve the argument in the variable `file_name`. Every time the argument is passed, the length of string is subtracted and the string is copied to the stack. The pointer of the string is recorded and, the string is inserted, the pointer is inserted in the stack with the order from right to left. Finally, the number of the arugments and the indirect pointer are passed onto the stack.
 
 ## Process Control Syscalls
 
 While trying to implement the ideas outlined in the design document, it was determined that many of the simpler functions, such as `practice` and `halt`, could be implemented inline. Additionally, `exec` and `exit` already exist as functions in the skeleton code, so it was necessary to name the syscall functionality for those commands `handle_exec` and `handle_exit` respectively within syscall.c.
 
-To ensure wait twice would not cause threads to block, it was important to free the wait status as soon as the `sema_down` was completed. Everytime `handle_exit` was used before a `thread_exit` to ensure the wait status was correctly released and the kernel thread can exit normally.
+To ensure wait twice would not cause threads to block, it was important to free the wait status as soon as the `sema_down` was completed. `handle_exit` was used before a `thread_exit` to ensure the wait status was correctly released and the kernel thread can exit normally.
 
-Dealing with the `exec` syscall one semaphore `end_l` and one lock `exec_lock` were integrated to synchrnoize loading the status of a child process. Previously, the plan for dealing with the load status was not fully developed. In addition, to protect an executing file from being written ,we modified `load` function, and `struct thread`, to let the process holds its file before it is closed, and invoke `file_deny_write` to protect the executable.
+To implement the `exec` syscall, one semaphore `end_l` and one lock `exec_lock` were integrated to synchrnoize loading the status of a child process. Previously, the plan for dealing with the load status was not fully developed. In addition, to protect an executing file from allowing write permissions, the `load` function in process.c was modified, and `struct thread` held the executable file before it is closed. `file_deny_write` was also invoked to protect the executable.
 
 ## File Operation Syscalls
 
 It was not mentioned in the design document, but the file descriptor and list of open file descriptors needed to be exclusive to each thread.  In order to accomodate this, they were created as additional members of the existing thread struct in thread.h.  It was also necessary to add multiple checks to make sure the syscall arguments themselves were valid. After the design review, the idea of complicated synchronization attempts such as waiting for a file to be created before attempting to perform any operations on it or individual locks for each file was thrown out in favor of a global lock.  Read and write syscall implementations were substantially modified in order to allow access to `stdin` and `stdout`.  A new function called `files_helper` was added to look through the list of open file descriptors and return the `file_info` struct for the correct file. 
 
 ## Student Testing Report
-So we create two test case to test the tell and seek.
-First is `seek-and-tell.c` which is test the basic function of seek and tell.
-We use `seek` to move the file pointer and use `tell` if the file pointer is moved or not.
+Two test cases were created to test the tell and seek syscalls.
+First is `seek-and-tell`, which tests the basic function of the seek and tell syscalls.
+In this test, `seek` is called to move the file pointer and use `tell` to test if the file pointer is moved or not.
 
 seek-and-tell.output
 `
@@ -66,7 +66,7 @@ PASS
 `
 
 
-second is `seek-big` which we move the file pointer out of the size of file and test if tell could return the right file pointer postion.
+The second test is `seek-big`, which moves the file pointer out of the size of the file and tests if `tell` would return the right file pointer postion.
 seek-big.output
 `
 Copying tests/userprog/seek-big to scratch partition...
