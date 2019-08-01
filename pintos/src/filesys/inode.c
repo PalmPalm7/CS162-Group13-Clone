@@ -10,6 +10,7 @@
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
 
+#define CACHE_SIZE 32
 /* On-disk inode.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
@@ -39,10 +40,57 @@ struct inode
     struct inode_disk data;             /* Inode content. */
   };
 
+struct cache_entry
+  {
+    block_sector_t sector;
+    int ref_count;
+    char data[BLOCK_SECTOR_SIZE];
+  };
+
+struct block_cache
+  {
+    int entry_num;
+    struct cache_entry cache_entrys[CACHE_SIZE];
+  };
+
+struct block_cache cache;
+
+void cache_init()
+{
+    cache.entry_num = 0;
+    int i = 0;
+    for( i = 0; i < CACHE_SIZE; i++)
+      {
+        cache.cache_entrys[i].ref_count = 0;
+      }
+}
+
+// void cache_write(const block_sector_t sector,char data[])
+// {
+//   if(cache.entry_num < CACHE_SIZE)
+//   {
+//     cache.sectors[cache.entry_num]
+//   }
+
+
+// };
+
+void cache_read(const block_sector_t sector, char data[])
+{
+};
+
+void cache_sync()
+{
+
+};
+
+
 /* Returns the block device sector that contains byte offset POS
    within INODE.
    Returns -1 if INODE does not contain data for a byte at offset
    POS. */
+//need re-implement because it assumes that we have continuou allocated disk space
+//or just dispose it
 static block_sector_t
 byte_to_sector (const struct inode *inode, off_t pos)
 {
@@ -87,6 +135,10 @@ inode_create (block_sector_t sector, off_t length)
       size_t sectors = bytes_to_sectors (length);
       disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
+
+      // here we need to refractor `free_map_allocate ` which only allocate consecutive 
+      // free space however we could reuse the function to `bitmap_scan_and_flip` to allocate one block
+      // by call this function like  this bitmap_scan_and_flip (free_map, 0, 1, false)
       if (free_map_allocate (sectors, &disk_inode->start))
         {
           block_write (fs_device, sector, disk_inode);
@@ -108,6 +160,8 @@ inode_create (block_sector_t sector, off_t length)
 /* Reads an inode from SECTOR
    and returns a `struct inode' that contains it.
    Returns a null pointer if memory allocation fails. */
+
+// need cache   
 struct inode *
 inode_open (block_sector_t sector)
 {
