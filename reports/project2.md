@@ -22,7 +22,7 @@ First is `seek-and-tell`, which tests the basic function of the seek and tell sy
 In this test, `seek` is called to move the file pointer and use `tell` to test if the file pointer is moved or not.
 
 seek-and-tell.output
-`
+```
 Copying tests/userprog/seek-and-tell to scratch partition...
 qemu -hda /tmp/d70x2WKV1R.dsk -m 4 -net none -nographic -monitor null
 PiLo hda1
@@ -63,12 +63,12 @@ Powering off...
 seek-and-tell.result
 `
 PASS
-`
+```
 
 
 The second test is `seek-big`, which moves the file pointer out of the size of the file and tests if `tell` would return the right file pointer postion.
 seek-big.output
-`
+```
 Copying tests/userprog/seek-big to scratch partition...
 qemu -hda /tmp/bmmRVIB_lt.dsk -m 4 -net none -nographic -monitor null
 PiLo hda1
@@ -109,7 +109,7 @@ Powering off...
 seek-big.result
 `
 PASS
-`
+```
 
 
 
