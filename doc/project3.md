@@ -5,7 +5,7 @@ Design Document for Project 3: File System
 
 * Josh Alexander <josh.alexander1315@berkeley.edu>
 * Zuxin Li <lizx2019@berkeley.edu>
-* FirstName LastName <email@domain.example>
+* Handi Xie <hxie14@berkeley.edu>
 * FirstName LastName <email@domain.example>
 
 ## Task 2: Extensible Files
@@ -42,11 +42,21 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 
 ```
 
+###### free-map.c
+
+```
+static struct lock *map_lock;
+
+/* Allocates cnt sectors and stores them in *sectors */
+bool map_allocate (size_t cnt, block_sector_t *sectors);
+```
+
 ### Algorithms
 The new members of the inode_disk struct will keep track of the different types of inode pointers, with the direct and singly indirect pointers used first.  `void place_file_in_inode()` will take in the amount of bytes the file needs access to and an existing inode array with indirect pointers potentially pointing to NULL if the file was not taking up a significant amount of space previously.  It will set up any new pointers the new file size requires and fill out the `inode_array` accordingly.  In order to accomodate any attempts to write past the already allocated memory, this function will be called if a thread attempts to write at a location past the previous file size.  Any read past the previously determined file size will automatically return NULL.  This design will not support sparse files.
 
 
 ### Synchronization
+There are two methods we thought up about. One is to put lock directly on everysingle blocks of memory, which feels redundant. Therefore, we decided to put a lock on the freemap and use `free_map_allocate_nc ()` to ensure that whether all blocks are allocated.
 
 
 ### Rationale
