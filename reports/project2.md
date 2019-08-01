@@ -2,25 +2,27 @@ Final Report for Project 2: User Programs
 =========================================
 
 ## Argument Passing
-If any user level thread is created, it will have to call the function `load` to load the elf32 format executable file which also calls the function `setup_stack` to set the stack pointer which currently does not pass any arguments.  What we do is basically adjusting the stack pointer and passing the argumet.  Specifically we use the thread-safe function `strtok_r` to retrieve the argument in variable `file_name` and every time we pass the argument , we substract the length of string and copy this string to the stack. And we also record the pointer of the string and after we insert the string we insert the pointer  with the order from right to left. Finally we pass the number of the arugments and the  indirect pointer onto the stack.
+If any user level thread is created, it will have to call the function `load` to load the elf32 format executable file which also calls the function `setup_stack` to set the stack pointer which currently does not pass any arguments. The stack pointer is adjusted before passing the argumet.  Specifically the thread-safe function `strtok_r` is used to retrieve the argument in the variable `file_name`. Every time the argument is passed, the length of string is subtracted and the string is copied to the stack. The pointer of the string is recorded and, the string is inserted, the pointer is inserted in the stack with the order from right to left. Finally, the number of the arugments and the indirect pointer are passed onto the stack.
 
 ## Process Control Syscalls
 
 While trying to implement the ideas outlined in the design document, it was determined that many of the simpler functions, such as `practice` and `halt`, could be implemented inline. Additionally, `exec` and `exit` already exist as functions in the skeleton code, so it was necessary to name the syscall functionality for those commands `handle_exec` and `handle_exit` respectively within syscall.c.
-To ensure wait twice would not cause threads to block, it was important to free the wait status as soon as the `sema_down` was completed. Everytime `handle_exit` was used before a `thread_exit` to ensure the wait status was correctly released and the kernel thread can exit normally.
-Dealing with the `exec` syscall one semaphore `end_l` and one lock `exec_lock` were integrated to synchrnoize loading the status of a child process. Previously, the plan for dealing with the load status was not fully developed.
+
+To ensure wait twice would not cause threads to block, it was important to free the wait status as soon as the `sema_down` was completed. `handle_exit` was used before a `thread_exit` to ensure the wait status was correctly released and the kernel thread can exit normally.
+
+To implement the `exec` syscall, one semaphore `end_l` and one lock `exec_lock` were integrated to synchrnoize loading the status of a child process. Previously, the plan for dealing with the load status was not fully developed. In addition, to protect an executing file from allowing write permissions, the `load` function in process.c was modified, and `struct thread` held the executable file before it is closed. `file_deny_write` was also invoked to protect the executable.
 
 ## File Operation Syscalls
 
 It was not mentioned in the design document, but the file descriptor and list of open file descriptors needed to be exclusive to each thread.  In order to accomodate this, they were created as additional members of the existing thread struct in thread.h.  It was also necessary to add multiple checks to make sure the syscall arguments themselves were valid. After the design review, the idea of complicated synchronization attempts such as waiting for a file to be created before attempting to perform any operations on it or individual locks for each file was thrown out in favor of a global lock.  Read and write syscall implementations were substantially modified in order to allow access to `stdin` and `stdout`.  A new function called `files_helper` was added to look through the list of open file descriptors and return the `file_info` struct for the correct file. 
 
 ## Student Testing Report
-So we create two test case to test the tell and seek.
-First is `seek-and-tell.c` which is test the basic function of seek and tell.
-We use `seek` to move the file pointer and use `tell` if the file pointer is moved or not.
+Two test cases were created to test the tell and seek syscalls.
+First is `seek-and-tell`, which tests the basic function of the seek and tell syscalls.
+In this test, `seek` is called to move the file pointer and use `tell` to test if the file pointer is moved or not.
 
 seek-and-tell.output
-`
+```
 Copying tests/userprog/seek-and-tell to scratch partition...
 qemu -hda /tmp/d70x2WKV1R.dsk -m 4 -net none -nographic -monitor null
 PiLo hda1
@@ -61,12 +63,12 @@ Powering off...
 seek-and-tell.result
 `
 PASS
-`
+```
 
 
-second is `seek-big` which we move the file pointer out of the size of file and test if tell could return the right file pointer postion.
+The second test is `seek-big`, which moves the file pointer out of the size of the file and tests if `tell` would return the right file pointer postion.
 seek-big.output
-`
+```
 Copying tests/userprog/seek-big to scratch partition...
 qemu -hda /tmp/bmmRVIB_lt.dsk -m 4 -net none -nographic -monitor null
 PiLo hda1
@@ -107,16 +109,16 @@ Powering off...
 seek-big.result
 `
 PASS
-`
+```
 
 
 
 ## Reflection and improvment
 
 Josh handled the open, close, create, and remove syscalls as well as the invalid argument checking for all file operation syscalls. Josh also worked on the File Operation Syscalls section of the documents and polishing the design document and final report. 
-Zuxin worked on implementing the process control syscalls as well as planning and writing the Process Control Syscalls portion of the documents.
+Zuxin worked on implementing the process control syscalls as well as planning and writing the Process Control Syscalls portion of the documents, and protection from writing and openning executable.
 Handi handled the write, read, seek, filesize, and tell syscalls.  He also helped with planning the file operation syscall implementation.
 Gary focused on creating the argument handler and the student testing code and report.  He also filled in with various other tasks as needed and wrote the Argument Handler section of the documents.
 Everybody put significant effort into integrating the code between the various tasks.
 
-The group certainly had a tendency to get the majority of the work done close to the deadline for a given part, much more so than in project 1. This is largely due to a midterm during the first week and the group was not fully prepared to work on the project. It will be better to try to spread out the work across the two weeks, while things are not getting so well.  Meeting in person to work on implementing the code seemed to be a particularly effective strategy despite mostly doing so out of necessity.  Furthermore, the group had encountered a few issues with git and should try to make sure that no issues arise due to improper use of git in the future.
+The group certainly had a tendency to get the majority of the work done close to the deadline for a given part, much more so than in project 1. This is largely due to a midterm during the first week and the group was not fully prepared to work on the project, and the necessary part comes out very late, which pushes the test time back to the very end of the deadline. It will be better to try to spread out the work across the two weeks, while things are not getting so well.  Meeting in person to work on implementing the code seemed to be a particularly effective strategy despite mostly doing so out of necessity.  Furthermore, the group had encountered a few issues with git and should try to make sure that no issues arise due to improper use of git in the future.

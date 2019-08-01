@@ -19,9 +19,12 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #define ARGUMENT_MAX_NUM 20
+
+/* attributes to get loading status and synchronization*/
 int load_val;
 struct lock exec_lock;
 static struct semaphore temporary;
+
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -31,8 +34,8 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 int
 find_fd(void) 
 {
-  thread_current()->fd_count = thread_current()->fd_count + 1;
-  int retval = thread_current()->fd_count;
+  thread_current () -> fd_count = thread_current () -> fd_count + 1;
+  int retval = thread_current () -> fd_count;
 
   return retval;
 }
@@ -55,14 +58,16 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
   strlcpy (fn_copy_name,file_name,256);
   int i = 0; 
-  for(i = 0; i < strlen(fn_copy_name); i++){
-    if (fn_copy_name[i] == ' '){
+  for (i = 0; i < strlen(fn_copy_name); i++)
+  {
+    if (fn_copy_name[i] == ' ')
+    {
       fn_copy_name[i] = '\0';
       break;
     }
   }
   
-  tid_t parent_tid = thread_current() -> tid;
+  tid_t parent_tid = thread_current () -> tid;
   lock_acquire (&exec_lock);
   sema_init (&temporary, 0);
   /* Create a new thread to execute FILE_NAME. */
@@ -75,11 +80,11 @@ process_execute (const char *file_name)
   sema_init (&new_status -> end_p, 0);
   lock_init (&new_status -> ref_cnt_lock);
   new_status -> ref_cnt = 2;
-  list_push_back(&wait_list, &new_status -> elem);
+  list_push_back (&wait_list, &new_status -> elem);
   
   sema_down (&temporary);
-  lock_release(&exec_lock);
-  if(load_val)
+  lock_release (&exec_lock);
+  if (load_val)
     tid = TID_ERROR;
  
   return tid;
@@ -106,12 +111,12 @@ start_process (void *file_name_)
   if (!success)
     {
       load_val = -1;
-      sema_up(&temporary);
-      handle_exit(-1);
+      sema_up (&temporary);
+      handle_exit (-1);
       thread_exit ();
     }
     load_val = 0;
-    sema_up(&temporary);
+    sema_up (&temporary);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -166,7 +171,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
+  file_close(cur -> exec_file);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -302,6 +307,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: open failed\n", file_name);
       goto done;
     }
+  file_deny_write(file);
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -413,7 +419,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  t->exec_file = file;  
 
   return success;
 }
