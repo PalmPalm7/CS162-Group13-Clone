@@ -20,6 +20,7 @@
 #include "threads/vaddr.h"
 #define ARGUMENT_MAX_NUM 20
 int load_val;
+
 struct lock exec_lock;
 static struct semaphore temporary;
 static thread_func start_process NO_RETURN;

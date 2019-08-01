@@ -375,14 +375,11 @@ void clear_all_file()
 {
   struct thread *t = thread_current();
   struct list_elem* e;
-  for(e = list_begin(&(t -> open_list)); e != list_end((&t -> open_list));
-      e = list_next(e))
-    {
-      struct file_info* fi = list_entry(e, struct file_info, elem);
-      e = list_remove(e);
-      file_close(fi-> file);
-      free(fi);
-      if(e == list_end((&t -> open_list)))
-        return ;
-    }
+  while (list_size (&(t -> open_list)))
+  {
+    e = list_pop_front (& (t -> open_list));
+    struct file_info* fi = list_entry(e, struct file_info, elem);
+    file_close (fi-> file);
+    free(fi);
+  }
 }
