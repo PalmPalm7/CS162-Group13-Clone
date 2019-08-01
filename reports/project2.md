@@ -7,8 +7,10 @@ If any user level thread is created, it will have to call the function `load` to
 ## Process Control Syscalls
 
 While trying to implement the ideas outlined in the design document, it was determined that many of the simpler functions, such as `practice` and `halt`, could be implemented inline. Additionally, `exec` and `exit` already exist as functions in the skeleton code, so it was necessary to name the syscall functionality for those commands `handle_exec` and `handle_exit` respectively within syscall.c.
+
 To ensure wait twice would not cause threads to block, it was important to free the wait status as soon as the `sema_down` was completed. Everytime `handle_exit` was used before a `thread_exit` to ensure the wait status was correctly released and the kernel thread can exit normally.
-Dealing with the `exec` syscall one semaphore `end_l` and one lock `exec_lock` were integrated to synchrnoize loading the status of a child process. Previously, the plan for dealing with the load status was not fully developed.
+
+Dealing with the `exec` syscall one semaphore `end_l` and one lock `exec_lock` were integrated to synchrnoize loading the status of a child process. Previously, the plan for dealing with the load status was not fully developed. In addition, to protect an executing file from being written ,we modified `load` function, and `struct thread`, to let the process holds its file before it is closed, and invoke `file_deny_write` to protect the executable.
 
 ## File Operation Syscalls
 

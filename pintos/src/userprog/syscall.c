@@ -37,11 +37,13 @@ syscall_handler (struct intr_frame *f)
   struct list open_list = thread_current()->open_list;
   uint32_t* args = ((uint32_t*) f->esp);
   uint32_t* pagedir = thread_current()->pagedir;
+  /*sanity check 1, the syscall attribute should not exceeding memory space*/
   if((int*)f->esp <= 0x08048000 ||(args+1 >= PHYS_BASE))
     {
       handle_exit(-1);
       thread_exit();
     }
+  /* sanity check 2, the syscall attributes should not reach out of the process`s pages*/
   if (pagedir_get_page ( pagedir, args) == NULL)
     {
       handle_exit(-1);
@@ -65,7 +67,7 @@ syscall_handler (struct intr_frame *f)
            thread_exit();
          }
          f->eax = handle_exec (args[1]); 
-        break;
+         break;
       } 
     case SYS_WAIT:
       {
@@ -282,6 +284,7 @@ unsigned tell (int fd)
   return ret;
 }
 
+
 struct file_info*
 create_files_struct(struct file *open_file) 
 {
@@ -293,19 +296,21 @@ create_files_struct(struct file *open_file)
   return f1;
 }
 
+/*
+  find file info for a given file discriptor*/
 struct file_info* 
-files_helper (int fd) {
+files_helper (int fd) 
+{
   // Loop over the current file list
   struct list_elem *e;
   struct file_info *f;
   struct list open_list = thread_current()->open_list;
   int maxfd = thread_current()->fd_count;
 
-  if (list_empty(&open_list)) {
+  if (list_empty(&open_list)) 
     return NULL;
-  }
+  
 
-  // int lsize = list_size(&open_list);
 
   for(e = list_begin (&open_list); e != list_end (&open_list);
       e = list_next (e))
@@ -325,6 +330,9 @@ files_helper (int fd) {
   return NULL;
 }
 
+/* handling exit of a process
+   the function should set properly wait status, and sema_up for the process_wait
+   and do the cleaning of all files, then print out the exit code at last*/
 void 
 handle_exit(int ret_val)
 {
@@ -360,6 +368,11 @@ handle_exit(int ret_val)
    printf ("%s: exit(%d)\n", &thread_current ()->name, ret_val);
 }
 
+/*
+  handle for execute syscalls
+  how to dealing with tid is implemented in process_execute
+  this handler only do some sanity check and get the tid*/
+
 tid_t 
 handle_exec(const char *cmd_line)
 {
@@ -370,7 +383,9 @@ handle_exec(const char *cmd_line)
   return child_tid; 
 }
 
-
+/*
+  close all the file open by a process
+  this function is called on handle_exit */
 void clear_all_file()
 {
   struct thread *t = thread_current();
