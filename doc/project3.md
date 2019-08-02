@@ -70,25 +70,20 @@ void fsutil_extract (char **argv UNUSED);
 ```
 ### Algorithms
 
-We use LFU algorithm as our replacement policy. We have a member variable `ref_count` to store the how many time it is used. And every time we do the swapping ,we traversal all the entry in the cache and find the the entry with minimum ref_count to swap. 
+The LFU algorithm is used as the replacement policy. A member variable `ref_count` stores the how many time it has been used. Every time the swapping is done, all of the entries in the cache are traversed to find the the entry with the smallest `ref_count` to swap. 
 
 
 
 
 ### Synchronization
 #### Synchronize the cache
-Everytime we read or write the cache we use the function `cache_read` and `cache_write` which we call the `intr_disable` at the beginning of the function and set the intr level to its old to make sure our reading and writing cache is atomically.
-The these questions could be solved.
-
-1. Because cache operation is atomically so if one process is actively reading or writing the cache other process have no chance to write any thing into cache triggering swapping.
-2.  Because cache operation is atomically when one block is swapping out of cache the other process could access the cache.
-3. How  other processes are prevented from accessing the block before it is fully loaded? Same like aforemetioned reasons.
+Every read or write to the cache the functions `cache_read` and `cache_write` will be used.  They call `intr_disable` at the beginning of the function and set the interrupt level to its old state to make sure reading and writing to the cache is atomic. Cache operation is atomic so if one process is actively reading or writing to the cache other process have no chance to write anything into the cache triggering swapping.  The atomic nature of cache operations also prevent processes from accessing the cache while a block is being swapped out.  This also prevents other processes from accessing the block before it is fully loaded.
 
 #### Coalesce multiple writes
-The cache we implement is write-back cache so we only write the cache back when it is swapped out which means we could do many writes on this cache with only one disk operation.What's more because the cache operation is atomic , the synchroniztion issue of multiple writes occuring simutaneously is solved.
+The cache implemented is a write-back cache so the cache only writes back when a block containing the new information is swapped out. This means many writes can be completed on this cache with only one disk operation. Furthermore, since the cache operations are atomic, the synchroniztion issue of multiple writes occuring simutaneously will never arise.
 
 #### Rationale 
-We choose the LFU because it is easy to implement and the number of cache entry is not large and traversal the cache is affordable.
+The LFU replacement policy was chosen because it is easy to implement and the number of cache entries is not large while cache traversal is affordable.
 
 
 
