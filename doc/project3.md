@@ -133,7 +133,7 @@ bool map_allocate (size_t cnt, block_sector_t *sectors);
 ```
 
 ### Algorithms
-The new members of the inode_disk struct will keep track of the different types of inode pointers, with the direct and singly indirect pointers used first.  `void place_file_in_inode()` will take in the amount of bytes the file needs access to and an existing inode array with indirect pointers potentially pointing to NULL if the file was not taking up a significant amount of space previously.  It will set up any new pointers the new file size requires and fill out the `inode_array` accordingly.  In order to accomodate any attempts to write past the already allocated memory, this function will be called if a thread attempts to write at a location past the previous file size.  Any read past the previously determined file size will automatically return NULL.  This design will not support sparse files.
+The new members of the inode_disk struct will keep track of the different types of inode pointers, with the direct and singly indirect pointers used first.  `void place_file_in_inode()` will take in the amount of bytes the file needs access to and an existing inode array with indirect pointers potentially pointing to NULL if the file was not taking up a significant amount of space previously.  It will set up any new pointers the new file size requires and fill out the `inode_array` accordingly.  In order to accomodate any attempts to write past the already allocated memory, this function will be called if a thread attempts to write at a location past the previous file size.  Any read past the previously determined file size will automatically return NULL.  This function will store which disk blocks are newly added in case the filesystem is unable to allocate new ones in order to be able to roll back to the previous state.  This design will not support sparse files.
 
 
 ### Synchronization
@@ -146,18 +146,16 @@ Not all of the direct and indirect pointers are necessary to satisfy the minimum
 
 ## Addtional Question
 ### write  behind
-We use interrupt to add the featuresof writing behind.We set up a timer to a proper number and mode and register a interrupt handler to handle this interrupt. Everytime the timer generate a interrupt signal ,the handler will execute the context switching , disable interrupt and call the function `sync` to write all the dirty block to the disk.There is not any problems of synchronization because what we do is just write something to the some disk sector which is not accessed by any threads. And we do not need to acquire any locks too.
+Interrupts are used to add the features of write behind caches. A timer is set to an appropriate number and mode which will call an interrupt handler to handle the interrupt. Every time the timer generates an interrupt signal, the handler will execute the context switching, disable interrupts, and call the function `sync` to write all of the dirty blocks to the disk. There are not any problems with respect to synchronization since it simply writes something to the same disk sector which is not accessed by any other threads. No locks need to be acquired.
+
 ### read ahead
-The cache should transparent to the user. So we add this features inside the file system and don't change the syscall  `read`. Now we need to modify the 
+The cache should be transparent to the user. This feature is added inside the file system and doesn't change the syscall `read`. These functions do need to be adjusted.
 
 ```
 void cache_write(const block_sector_t sector,char data[]);
 bool cache_read(const block_sector_t sector, char data[]);
-```
-a little bit, we add the argument 
 
-```
 void cache_write(const block_sector_t sector,char data[],struct inode inode);
 bool cache_read(const block_sector_t sector, char data[],struct inode inode);
 ```
-`inode` to help us finding the next  block by  traversing the all the block that inode point to and cache the next few block in cache.
+The `inode` argument is added to help find the next block by traversing all of the blocks that inode points to and caching the next few blocks in the cache.
