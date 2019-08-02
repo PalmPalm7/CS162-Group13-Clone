@@ -184,12 +184,14 @@ struct dir
 
 
 ```
+
 Modified functions
+
+
 ```
 /* support relative and absolute path*/
 static bool lookup (const struct dir *dir, const char *name,struct dir_entry *ep, off_t *ofsp);
-
-
+```
 
 ### Algorithms
 
