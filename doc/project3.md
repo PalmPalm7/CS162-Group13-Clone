@@ -44,6 +44,9 @@ void cache_write(const block_sector_t sector,char data[]);
 bool cache_read(const block_sector_t sector, char data[]);
 void cache_sync();//flush every cache_entry.data to disk
 
+/* a cached version of block read and write*/
+void cached_block_read (struct block *, block_sector_t, void *);
+void cached_block_write (struct block *, block_sector_t, void *);
 ```
 
 `cache_write() ` takes the argument: sector and data. If we find the sector in cache we only change the data in cache and set `write` to true.  Every time  if a process access disk it calls the function `block_read`  or  `block_write` which means it fails to find valid entry in cache ,We need to cache it and `block_read ` return the data which read from the disk so we put the data and disk_index into the argument and `cache_write()` swap the cache entry according to our  LFU replacement policy or just add one valid entry if the cache is not full.When we do the swapping we first check the value of `write` if it is true write the data of cache entry by calling `blocl_write` or if it is false we do nothing.
