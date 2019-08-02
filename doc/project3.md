@@ -144,6 +144,90 @@ There are two methods we thought up about. One is to put lock directly on everys
 Not all of the direct and indirect pointers are necessary to satisfy the minimum project requirements.  One doubly indirect pointer accounts for a file size of 8MB exactly on its own.  However, in order to speed up the time it takes to access files much smaller than 8MB, 12 direct and 1 indirect pointers were included. Supporting sparse files was considered, but it was eventually determined to be an unnecessary coding complication.
 
 
+### Data Structures and Functions
+
+Added members for each struct
+
+```
+Struct thread
+  {
+    Struct dir* work_dir; /* working directory for the process*/
+    
+  }
+
+/*macros used to specifies directory and file*/
+```
+
+```
+#define ISDIR 1
+#define ISREG 0
+```
+
+```
+
+Struct dir_entry
+  {
+     inode_disk parent_sector;
+     Struct dir_entry* parent_dir /*parent dir entry*/
+     block_sector_t  parent_sector_num;
+     Int type;
+     
+  }
+
+struct dir
+ {
+   struct inode *inode;                /* Backing store. */
+   off_t pos;                          /* Current position. */
+   Lock *lock;                      /*Used for Synchronization*/
+   struct inode *parent.       /* Store parent directory */
+ };
+
+
+```
+Modified functions
+```
+/* support relative and absolute path*/
+static bool lookup (const struct dir *dir, const char *name,struct dir_entry *ep, off_t *ofsp);
+
+
+
+### Algorithms
+
+All functions will check to see if a given path is relative or absolute。If it is a relative path，it will be handled in a way similar to how it was handled in homework 1 where it will first have the current directory appended to the front of the relative path, then iterate through each successive given subdirectory until it reaches the one where the file it is trying to access will be located. This applies to all file system syscalls that needed to be modified from project 2.
+
+#### Chdir
+ 
+The argument needs to be parsed to get the name of the directory in the path. For an absolute directory, the root will be searched first. Next, this function will open the directory, find its directory entry with the given name and give it to the process. For a relative directory, this function will search from the current directory entry and find the `directory_entry` with the given name. At last, we set the `work_dir` to be the proper value and return. 
+
+#### Mkdir
+
+ `create_dir` will be called to create a new directory. Then, we update the parent directory entry for this new file. Specifically, we store the parent’s inode sector number in this dir struct and store the name of it in it’s parent dir_entry.
+
+#### Readdir
+
+ we use `dir_readir` from directory.c which reads the next directory entry in directory and stores the name.
+
+#### Isdir
+The directory will be searched for using `dir_lookup` in directory.c using either the current working directory or the given parent directory as the dir argument.
+
+#### Inumber
+`inode_get_inumber` from inode.c  will be called to find the appropriate inumber for the given file. 
+
+#### File System Syscalls from Project 2
+
+All of these functions will make use of a process similar to the one utilized in homework 1 and outlined at the start of the section. 
+
+### Synchronization
+
+We add a lock for the `struct dir` if any process want to access the dir_entry it have to acquire the lock of `dir` first which prevent any possible race condition happens. We don’t put the lock for each dir_entry for simplicity.
+
+###  Rationale
+
+Since the skeleton code is more like a FFS than FAT or NTFS, so it is more convenient  to do that in a FFS way. If we choose FAT to accomplish that, we may need to make an assumption of how big the filesystem is going to be.
+
+
+
+
 ## Addtional Question
 ### write  behind
 Interrupts are used to add the features of write behind caches. A timer is set to an appropriate number and mode which will call an interrupt handler to handle the interrupt. Every time the timer generates an interrupt signal, the handler will execute the context switching, disable interrupts, and call the function `sync` to write all of the dirty blocks to the disk. There are not any problems with respect to synchronization since it simply writes something to the same disk sector which is not accessed by any other threads. No locks need to be acquired.
