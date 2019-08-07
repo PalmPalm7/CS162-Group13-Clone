@@ -13,6 +13,7 @@
         "thread.h": "c",
         "typeinfo": "c",
         "main.h": "c",
-        "lib.h": "c"
+        "lib.h": "c",
+        "filesys.h": "c"
     }
 }

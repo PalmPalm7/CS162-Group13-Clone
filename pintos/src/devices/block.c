@@ -207,7 +207,6 @@ block_register (const char *name, enum block_type type,
   if (extra_info != NULL)
     printf (", %s", extra_info);
   printf ("\n");
-
   return block;
 }
 

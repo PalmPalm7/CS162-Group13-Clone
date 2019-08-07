@@ -3,6 +3,7 @@
 #include <debug.h>
 #include <round.h>
 #include <string.h>
+#include "threads/synch.h"
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
@@ -43,41 +44,138 @@ struct inode
 struct cache_entry
   {
     block_sector_t sector;
+    struct lock lock;
     int ref_count;
+    bool write;
     char data[BLOCK_SECTOR_SIZE];
   };
 
 struct block_cache
   {
+    struct lock entry_num_lock;
     int entry_num;
     struct cache_entry cache_entrys[CACHE_SIZE];
   };
 
 struct block_cache cache;
 
+
+void cache_write(struct block *block, const block_sector_t sector, void *data);
+
 void cache_init()
 {
     cache.entry_num = 0;
+    lock_init (&(cache.entry_num_lock));
     int i = 0;
     for( i = 0; i < CACHE_SIZE; i++)
       {
+        cache.cache_entrys[i].sector = -1;
         cache.cache_entrys[i].ref_count = 0;
+        lock_init(&(cache.cache_entrys[i].lock));
+        cache.cache_entrys[i].write = false;
       }
 }
 
-// void cache_write(const block_sector_t sector,char data[])
-// {
-//   if(cache.entry_num < CACHE_SIZE)
-//   {
-//     cache.sectors[cache.entry_num]
-//   }
 
-
-// };
-
-void cache_read(const block_sector_t sector, char data[])
+bool cache_read(struct block *block, const block_sector_t sector, void *data)
 {
-};
+  (char*)data;
+  int i = 0;
+  bool found = false; 
+  for ( i = 0; i < cache.entry_num; i++)
+    {
+      lock_acquire(&(cache.cache_entrys[i].lock));
+      if (cache.cache_entrys[i].sector == sector )
+      {
+        cache.cache_entrys[i].ref_count = 0;
+        memcpy(data, cache.cache_entrys[i].data, BLOCK_SECTOR_SIZE);
+        found = true;
+      }
+      else
+      {
+        cache.cache_entrys[i].ref_count+=1;
+      }
+      lock_release(&(cache.cache_entrys[i].lock));
+    }
+  if (found)
+  {
+    return found;
+  }
+  block_read (fs_device,sector,(void*)data);
+  cache_write (fs_device,sector,(void*)data);
+  return found;
+}
+
+void cache_write(struct block *block, const block_sector_t sector, void *data)
+{
+  (char*)data;
+  int i = 0; 
+  int replace = 0;
+  int max_index = 0, max = 0;
+  int found = 0;
+  for ( i = 0; i < cache.entry_num; i++)
+  {
+    lock_acquire (&(cache.cache_entrys[i].lock));
+    if (cache.cache_entrys[i].sector == sector )
+    {
+      cache.cache_entrys[i].ref_count = 0;
+      found = 1;
+      replace = i;
+    }
+    else
+    {
+      cache.cache_entrys[i].ref_count+=1;
+      if (cache.cache_entrys[i].ref_count > max)
+      {
+        max = cache.cache_entrys[i].ref_count;
+        max_index = i;
+      }
+    }
+    lock_release (&(cache.cache_entrys[i].lock));
+  }
+  if (found)
+  {
+    lock_acquire(&(cache.cache_entrys[replace].lock));
+    cache.cache_entrys[replace].sector = sector;
+    cache.cache_entrys[replace].ref_count = 0;
+    cache.cache_entrys[replace].write = true;
+    memcpy(cache.cache_entrys[replace].data, data, BLOCK_SECTOR_SIZE);
+    lock_release(&(cache.cache_entrys[replace].lock));
+    return;
+  }
+  lock_acquire(&(cache.entry_num_lock));
+  if (cache.entry_num < CACHE_SIZE)
+  {
+    lock_acquire(&(cache.cache_entrys[cache.entry_num].lock));
+    cache.cache_entrys[cache.entry_num].sector = sector;
+    cache.cache_entrys[cache.entry_num].ref_count = 0;
+    cache.cache_entrys[cache.entry_num].write = false;
+    memcpy(cache.cache_entrys[cache.entry_num].data, data, BLOCK_SECTOR_SIZE);
+    lock_release(&(cache.cache_entrys[cache.entry_num].lock));
+    cache.entry_num+=1;
+  }
+  lock_release(&(cache.entry_num_lock));
+
+  lock_acquire(&(cache.entry_num_lock));
+  if (cache.entry_num >= CACHE_SIZE)
+  {
+    lock_acquire(&(cache.cache_entrys[max_index].lock));
+    //if (cache.cache_entrys[max_index].write)
+    {
+      block_write(fs_device,cache.cache_entrys[max_index].sector, \
+      cache.cache_entrys[max_index].data);
+    }
+    cache.cache_entrys[max_index].sector = sector;
+    cache.cache_entrys[max_index].ref_count = 0;
+    cache.cache_entrys[max_index].write = false;
+    memcpy(cache.cache_entrys[max_index].data, data, BLOCK_SECTOR_SIZE);
+    lock_release(&(cache.cache_entrys[max_index].lock));
+  }
+  lock_release(&(cache.entry_num_lock));
+}
+
+
+
 
 void cache_sync()
 {
@@ -110,6 +208,7 @@ void
 inode_init (void)
 {
   list_init (&open_inodes);
+  cache_init();
 }
 
 /* Initializes an inode with LENGTH bytes of data and
@@ -141,14 +240,15 @@ inode_create (block_sector_t sector, off_t length)
       // by call this function like  this bitmap_scan_and_flip (free_map, 0, 1, false)
       if (free_map_allocate (sectors, &disk_inode->start))
         {
-          block_write (fs_device, sector, disk_inode);
+          cache_write (fs_device, sector, disk_inode);
           if (sectors > 0)
+
             {
               static char zeros[BLOCK_SECTOR_SIZE];
               size_t i;
 
               for (i = 0; i < sectors; i++)
-                block_write (fs_device, disk_inode->start + i, zeros);
+                cache_write (fs_device, disk_inode->start + i, zeros);
             }
           success = true;
         }
@@ -191,7 +291,8 @@ inode_open (block_sector_t sector)
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
-  block_read (fs_device, inode->sector, &inode->data);
+  //cache_read (fs_device, inode->sector, &inode->data);
+  cache_read (fs_device, inode->sector, &inode->data);
   return inode;
 }
 
@@ -277,7 +378,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
         {
           /* Read full sector directly into caller's buffer. */
-          block_read (fs_device, sector_idx, buffer + bytes_read);
+          cache_read (fs_device, sector_idx, buffer + bytes_read);
         }
       else
         {
@@ -289,7 +390,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
               if (bounce == NULL)
                 break;
             }
-          block_read (fs_device, sector_idx, bounce);
+          cache_read (fs_device, sector_idx, bounce);
           memcpy (buffer + bytes_read, bounce + sector_ofs, chunk_size);
         }
 
@@ -338,7 +439,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
         {
           /* Write full sector directly to disk. */
-          block_write (fs_device, sector_idx, buffer + bytes_written);
+          cache_write (fs_device, sector_idx, buffer + bytes_written);
         }
       else
         {
@@ -354,11 +455,11 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
              we're writing, then we need to read in the sector
              first.  Otherwise we start with a sector of all zeros. */
           if (sector_ofs > 0 || chunk_size < sector_left)
-            block_read (fs_device, sector_idx, bounce);
+            cache_read (fs_device, sector_idx, bounce);
           else
             memset (bounce, 0, BLOCK_SECTOR_SIZE);
           memcpy (bounce + sector_ofs, buffer + bytes_written, chunk_size);
-          block_write (fs_device, sector_idx, bounce);
+          cache_write (fs_device, sector_idx, bounce);
         }
 
       /* Advance. */
