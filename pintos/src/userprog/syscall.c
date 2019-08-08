@@ -10,6 +10,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
+#include "filesys/inode.h"
+
 
 
 static void syscall_handler (struct intr_frame *f);
@@ -81,6 +83,7 @@ syscall_handler (struct intr_frame *f)
       }
     case SYS_HALT: 
       {
+        cache_sync();
         shutdown_power_off();
       }
     case SYS_READ:

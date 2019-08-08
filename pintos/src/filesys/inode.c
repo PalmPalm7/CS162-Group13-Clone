@@ -179,7 +179,11 @@ void cache_write(struct block *block, const block_sector_t sector, void *data)
 
 void cache_sync()
 {
-  
+  int i = 0;
+  for (i = 0; i < CACHE_SIZE ; i++)
+  {
+    block_write(fs_device,cache.cache_entrys[i].sector,cache.cache_entrys[i].data);
+  }
 };
 
 
