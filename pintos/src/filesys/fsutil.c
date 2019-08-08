@@ -98,6 +98,7 @@ fsutil_extract (char **argv UNUSED)
       int size;
 
       /* Read and parse ustar header. */
+      // cache_read (src, sector++, header);
       block_read (src, sector++, header);
       error = ustar_parse_header (header, &file_name, &type, &size);
       if (error != NULL)
@@ -129,6 +130,7 @@ fsutil_extract (char **argv UNUSED)
               int chunk_size = (size > BLOCK_SECTOR_SIZE
                                 ? BLOCK_SECTOR_SIZE
                                 : size);
+              // cache_read (src, sector++, data);
               block_read (src, sector++, data);
               if (file_write (dst, data, chunk_size) != chunk_size)
                 PANIC ("%s: write failed with %d bytes unwritten",
@@ -147,7 +149,9 @@ fsutil_extract (char **argv UNUSED)
      end-of-archive marker. */
   printf ("Erasing ustar archive...\n");
   memset (header, 0, BLOCK_SECTOR_SIZE);
+  // cache_write (src, 0, header);
   block_write (src, 0, header);
+  // cache_write (src, 1, header);
   block_write (src, 1, header);
 
   free (data);
@@ -194,6 +198,7 @@ fsutil_append (char **argv)
   /* Write ustar header to first sector. */
   if (!ustar_make_header (file_name, USTAR_REGULAR, size, buffer))
     PANIC ("%s: name too long for ustar format", file_name);
+  // cache_write (dst, sector++, buffer);  
   block_write (dst, sector++, buffer);
 
   /* Do copy. */
@@ -205,6 +210,7 @@ fsutil_append (char **argv)
       if (file_read (src, buffer, chunk_size) != chunk_size)
         PANIC ("%s: read failed with %"PROTd" bytes unread", file_name, size);
       memset (buffer + chunk_size, 0, BLOCK_SECTOR_SIZE - chunk_size);
+      // cache_write (dst, sector++, buffer);
       block_write (dst, sector++, buffer);
       size -= chunk_size;
     }
@@ -213,6 +219,9 @@ fsutil_append (char **argv)
      sectors full of zeros.  Don't advance our position past
      them, though, in case we have more files to append. */
   memset (buffer, 0, BLOCK_SECTOR_SIZE);
+  // cache_write (dst, sector, buffer);
+  // cache_write (dst, sector, buffer + 1);
+
   block_write (dst, sector, buffer);
   block_write (dst, sector, buffer + 1);
 
