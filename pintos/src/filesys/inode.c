@@ -155,12 +155,11 @@ void cache_write(struct block *block, const block_sector_t sector, void *data)
     cache.entry_num+=1;
   }
   lock_release(&(cache.entry_num_lock));
-  return;
   lock_acquire(&(cache.entry_num_lock));
   if (cache.entry_num >= CACHE_SIZE)
   {
     lock_acquire(&(cache.cache_entrys[max_index].lock));
-    if (cache.cache_entrys[max_index].write)
+    //if (cache.cache_entrys[max_index].write)
     {
       block_write(fs_device,cache.cache_entrys[max_index].sector, \
       cache.cache_entrys[max_index].data);
