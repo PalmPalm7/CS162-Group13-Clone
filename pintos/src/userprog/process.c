@@ -81,12 +81,13 @@ process_execute (const char *file_name)
   lock_init (&new_status -> ref_cnt_lock);
   new_status -> ref_cnt = 2;
   list_push_back (&wait_list, &new_status -> elem);
+  set_work_dir(parent_tid, tid);
   
   sema_down (&temporary);
   lock_release (&exec_lock);
   if (load_val)
     tid = TID_ERROR;
- 
+  
   return tid;
 }
 
@@ -171,7 +172,10 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-  file_close(cur -> exec_file);
+  file_close (cur -> exec_file);
+
+  dir_close(cur -> work_dir);
+  free (cur -> work_dir);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -571,4 +575,33 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+extern struct list all_list;
+
+struct thread* get_thread(tid_t tid)
+{
+  struct thread* t;
+  struct list_elem* e;
+  for (e = list_begin (&all_list); e != list_end (&all_list);
+       e = list_next (e))
+    {
+      t = list_entry (e, struct thread, allelem);
+      if (t -> tid == tid)
+        return t;
+     }
+  return -1;
+}
+
+void set_work_dir(tid_t ptid, tid_t ctid)
+{
+  struct thread* ct = get_thread(ptid);
+  struct thread* pt = get_thread(ctid);
+  ct -> work_dir = (struct dir*) malloc (sizeof (struct dir));
+  if (pt -> work_dir == NULL)
+    {
+       ct -> work_dir = dir_open_root();
+       return ;
+    } 
+  *(ct -> work_dir) = *(pt -> work_dir); 
 }

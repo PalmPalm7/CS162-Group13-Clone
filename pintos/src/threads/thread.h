@@ -103,6 +103,9 @@ struct thread
     int fd_count;
     struct list open_list;
     struct file* exec_file;
+    
+    struct dir* work_dir; /* working directory for the process*/
+
 #endif
 
     /* Owned by thread.c. */
@@ -146,6 +149,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
 
 
 #endif /* threads/thread.h */

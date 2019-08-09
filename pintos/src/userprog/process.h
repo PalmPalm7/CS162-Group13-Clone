@@ -26,4 +26,8 @@ struct wait_status {
 /* status of all wait */
 struct list wait_list;
 
+struct thread* get_thread (tid_t tid);
+
+void set_work_dir (tid_t ptid, tid_t ctid);
+
 #endif /* userprog/process.h */
