@@ -53,6 +53,7 @@ bool dir_remove (struct dir *, const char *name);
 bool dir_readdir (struct dir *, char name[NAME_MAX + 1]);
 
 /*helper function to iteratively find long path*/
-bool find_path(const struct dir *dir, const char *name,struct dir_entry *ep, off_t *ofsp);
+bool find_path(const struct dir *dir, const char *name,
+               char *tail_name, struct dir *file_dir);
 
 #endif /* filesys/directory.h */

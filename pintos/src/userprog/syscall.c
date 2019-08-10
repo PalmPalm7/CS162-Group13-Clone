@@ -10,7 +10,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
-
+#include "filesys/inode.h"
 
 static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
@@ -121,7 +121,7 @@ syscall_handler (struct intr_frame *f)
              }
 
   	   f->eax = filesys_create(args[1], args[2],IS_REG);
-         }
+        }
         break;
 
      }
@@ -175,22 +175,67 @@ syscall_handler (struct intr_frame *f)
     }
   case SYS_CHDIR:
     {
-      struct dir_entry e;
+      if (args[1] == NULL || !strcmp(args[1], "")) 
+        {
+          f->eax = false;
+          break;
+        } 
+      char tail_name[NAME_MAX+1];
       struct thread *t = thread_current(); 
-      if (find_path (t -> work_dir ,args[1], &e, NULL))
+      struct dir next_dir;
+      if (t -> work_dir == NULL)
+        t -> work_dir = dir_open_root ();
+      if (find_path (t -> work_dir ,args[1], tail_name, &next_dir))
         {
+          struct inode *in;
           dir_close (t -> work_dir);
-          t -> work_dir = dir_open (inode_open (e.inode_sector));
-          f -> eax = true;
+          dir_lookup (&next_dir, tail_name, &in);
+          dir_close (&next_dir);
+          if (in != NULL)
+            {
+              t -> work_dir = dir_open (inode_open (in));
+              f -> eax = false;
+              break;
+            }
         }
-      else 
-        {
-          f -> eax = false;
-        }
-        break;      
+      /* file not found or error path*/
+      f -> eax = false;
+      break;      
     }
   case SYS_MKDIR:
     {
+      if (args[1] == NULL || !strcmp(args[1], "")) 
+        {
+          f->eax = false;
+          break;
+        }
+       char tail_name[NAME_MAX+1] ;
+       struct thread *t = thread_current ();
+       struct dir next_dir;
+       if( t -> work_dir == NULL)
+         t -> work_dir = dir_open_root ();
+       if(find_path( t-> work_dir, args[1], tail_name, &next_dir))
+         {
+           struct inode *in;
+           /* there is given directory in the path*/
+           if (dir_lookup(&next_dir, tail_name, &in))
+             {
+               f->eax = false;
+               dir_close(&next_dir);
+               break;
+             }
+           else
+             {
+               /* since filesys_create will always lookup working directory
+                  we need to change current working directroy into next_dir*/
+               struct dir* temp = t-> work_dir;
+               t -> work_dir = &next_dir;
+               f -> eax = filesys_create(tail_name, 512, IS_DIR);
+               t -> work_dir = temp;
+             }
+         }
+       else
+         f -> eax = false;
        break;
     }
    

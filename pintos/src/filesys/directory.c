@@ -126,16 +126,21 @@ lookup (const struct dir *dir, const char *name,
 
 /*find if there is any file on the given path,
   which should invoke lookup for muitiple times,
+  return the tailed name of the path, and the 
+  path of working directory.
+  it is the caller`s responsibilty to close the
+  directory
   once it failed, it will return false. */
 bool
 find_path(const struct dir *dir, const char *name,
-          struct dir_entry *ep, off_t *ofsp)
+          char *tail_name, struct dir *file_dir)
 {
   bool abs_path = false;
  
   ASSERT(dir != NULL);
   ASSERT(name != NULL);
 
+  /* if absolute path, then user root directory, and close it afterward*/
   if(name[0] == '/')
     abs_path = true;
   char file_name[NAME_MAX+1];  
@@ -147,19 +152,22 @@ find_path(const struct dir *dir, const char *name,
   while ( get_next_part (file_name, &(name)))
   {
     /* before the function could get 0, it is iterating through the path*/
+    if (!strlen(name))
+      {
+        break;
+      }  
      struct inode *in;
      if(!dir_lookup(now_dir, file_name, &in))
        {
           printf("path directory wrong\n");
           return false;
        }
-     if(abs_path)
+     if (now_dir != dir)
        dir_close(now_dir);
      now_dir = dir_open (in);
   }
-  
-  /*after the function get 0, it reaches the end*/
-  lookup(now_dir, file_name, ep, ofsp);
+  strlcpy (tail_name, file_name, NAME_MAX+1);
+  *(file_dir) = *(now_dir); 
   return true;
 }
 
