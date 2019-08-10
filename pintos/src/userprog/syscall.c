@@ -120,7 +120,7 @@ syscall_handler (struct intr_frame *f)
                thread_exit();
              }
 
-  	   f->eax = filesys_create(args[1], args[2]);
+  	   f->eax = filesys_create(args[1], args[2],IS_REG);
          }
         break;
 
@@ -173,7 +173,27 @@ syscall_handler (struct intr_frame *f)
        f->eax = write (args[1], (void *) args[2], args[3]);
        break;
     }
- 
+  case SYS_CHDIR:
+    {
+      struct dir_entry e;
+      struct thread *t = thread_current(); 
+      if (find_path (t -> work_dir ,args[1], &e, NULL))
+        {
+          dir_close (t -> work_dir);
+          t -> work_dir = dir_open (inode_open (e.inode_sector));
+          f -> eax = true;
+        }
+      else 
+        {
+          f -> eax = false;
+        }
+        break;      
+    }
+  case SYS_MKDIR:
+    {
+       break;
+    }
+   
    default:
     {
       // TODO: Find the current file

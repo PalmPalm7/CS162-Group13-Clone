@@ -13,6 +13,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
+#include "filesys/directory.h"
 
 struct file_info
   {

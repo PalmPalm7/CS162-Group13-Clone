@@ -6,7 +6,6 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
-
 /* Extracts a file name part from *SRCP into PART, and updates *SRCP so that the
  * next call will return the next file name part. Returns 1 if successful, 0 at
  * end of string, -1 for a too-long file name part. */
@@ -124,6 +123,46 @@ lookup (const struct dir *dir, const char *name,
       }
   return false;
 }
+
+/*find if there is any file on the given path,
+  which should invoke lookup for muitiple times,
+  once it failed, it will return false. */
+bool
+find_path(const struct dir *dir, const char *name,
+          struct dir_entry *ep, off_t *ofsp)
+{
+  bool abs_path = false;
+ 
+  ASSERT(dir != NULL);
+  ASSERT(name != NULL);
+
+  if(name[0] == '/')
+    abs_path = true;
+  char file_name[NAME_MAX+1];  
+  struct dir *now_dir;
+  if(abs_path)
+    now_dir = dir_open_root ();
+  else
+    now_dir = dir; 
+  while ( get_next_part (file_name, &(name)))
+  {
+    /* before the function could get 0, it is iterating through the path*/
+     struct inode *in;
+     if(!dir_lookup(now_dir, file_name, &in))
+       {
+          printf("path directory wrong\n");
+          return false;
+       }
+     if(abs_path)
+       dir_close(now_dir);
+     now_dir = dir_open (in);
+  }
+  
+  /*after the function get 0, it reaches the end*/
+  lookup(now_dir, file_name, ep, ofsp);
+  return true;
+}
+
 
 /* Searches DIR for a file with the given NAME
    and returns true if one exists, false otherwise.
