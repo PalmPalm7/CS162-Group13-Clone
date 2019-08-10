@@ -175,7 +175,6 @@ process_exit (void)
   file_close (cur -> exec_file);
 
   dir_close(cur -> work_dir);
-  free (cur -> work_dir);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -595,13 +594,11 @@ struct thread* get_thread(tid_t tid)
 
 void set_work_dir(tid_t ptid, tid_t ctid)
 {
-  struct thread* ct = get_thread(ptid);
-  struct thread* pt = get_thread(ctid);
-  ct -> work_dir = (struct dir*) malloc (sizeof (struct dir));
+  struct thread* ct = get_thread(ctid);
+  struct thread* pt = get_thread(ptid);
   if (pt -> work_dir == NULL)
     {
-       ct -> work_dir = dir_open_root();
        return ;
     } 
-  *(ct -> work_dir) = *(pt -> work_dir); 
+   ct -> work_dir = dir_open(pt -> work_dir -> inode);
 }

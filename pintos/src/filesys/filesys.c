@@ -19,7 +19,10 @@ dir_open_current()
   struct dir *dir;
   struct dir *work_dir = thread_current () -> work_dir;
   if(work_dir == NULL)
+  {
     dir = dir_open_root ();
+    work_dir = dir;
+  }
   else
     dir = work_dir;
   return dir;
@@ -59,7 +62,7 @@ bool
 filesys_create (const char *name, off_t initial_size)
 {
   block_sector_t inode_sector = 0;
-  struct dir *dir = dir_open_root ();
+  struct dir *dir = dir_open_current ();
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size)
@@ -79,7 +82,7 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
-  struct dir *dir = dir_open_root ();
+  struct dir *dir = dir_open_current ();
   struct inode *inode = NULL;
 
   if (dir != NULL)
@@ -96,7 +99,7 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name)
 {
-  struct dir *dir = dir_open_root ();
+  struct dir *dir = dir_open_current ();
   bool success = dir != NULL && dir_remove (dir, name);
   dir_close (dir);
 
