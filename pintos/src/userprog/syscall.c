@@ -124,6 +124,11 @@ syscall_handler (struct intr_frame *f)
                thread_exit();
              }
 
+           if (args[1] == NULL || !strcmp(args[1], "")) 
+             {
+               f->eax = 0;
+               break;
+             } 
            if( t -> work_dir == NULL)
              t -> work_dir = dir_open_root ();
            if(find_path( t-> work_dir, args[1], tail_name, next_dir))
@@ -131,7 +136,7 @@ syscall_handler (struct intr_frame *f)
                /* currently move to given directory, then move back*/
                struct dir *temp = t -> work_dir;
                t -> work_dir = next_dir;
-  	       f -> eax = filesys_create(args[1], args[2],IS_REG);
+  	       f -> eax = filesys_create(tail_name, args[2],IS_REG);
                t -> work_dir = temp;
              }
            else
@@ -167,16 +172,17 @@ syscall_handler (struct intr_frame *f)
      else 
        {
          struct dir_entry* dirent = dir_getdirent (dir_open_current (), args[1]);
-         if(dirent == NULL || dirent -> type == IS_DIR)
+         if(dirent == NULL)
            {
              f -> eax = -1;
              break;
            }
+         
          struct file *open_file = filesys_open(args[1]);
     	  if (open_file != NULL)
             {
     	      struct file_info *f1 = create_files_struct (open_file);
-	      f1->file_name = args[1];
+              f1 -> dirent = dirent;
   	      list_push_back (&thread_current()->open_list, &f1->elem);
   	      f->eax = f1->file_descriptor;
   	    } 
@@ -288,6 +294,7 @@ syscall_handler (struct intr_frame *f)
                 {
                   list_remove(&curr_file->elem);
     	          file_close(curr_file->file);
+                  free(curr_file -> dirent);
     	          free(curr_file);
                  }
             }
@@ -317,8 +324,8 @@ int read (int fd, const void *buffer, unsigned length)
   else 
     {
       struct file_info *curr_file = files_helper (fd);
-      if (curr_file == NULL)
-      return -1;
+      if (curr_file == NULL || curr_file ->dirent ->type == IS_DIR)
+        return -1;
       int ret = file_read(curr_file->file, buffer, length);
       return ret;
     }
@@ -341,7 +348,7 @@ int write (int fd, const void *buffer, unsigned length)
   else 
     {
       struct file_info *curr_file = files_helper (fd);
-      if (curr_file == NULL)
+      if (curr_file == NULL || curr_file -> dirent -> type == IS_DIR)
         return -1;
       int ret = file_write(curr_file->file, buffer, length);
       return ret;

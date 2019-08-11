@@ -153,10 +153,10 @@ find_path(const struct dir *dir, const char *name,
   while (result = get_next_part (file_name, &(name)))
   {
     /* before the function could get 0, it is iterating through the path*/
-    if (!strlen(name) || result == -1)
-      {
-        break;
-      }  
+    if (!strlen (name))
+      break;
+    if(result == -1)
+      return false;
      struct inode *in;
      if(!dir_lookup(now_dir, file_name, &in))
        {
