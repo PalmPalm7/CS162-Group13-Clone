@@ -23,3 +23,8 @@ was added.
 `dir_open_current` support work directory for the threads.
 
 Besides, the sohpiscated syscall related with subdirectory is very hard to implemented and far beyond our imagination on design phase.
+
+here are the modified functions
+```
+bool dir_readdir(struct dir* dir, const char* name)
+```
