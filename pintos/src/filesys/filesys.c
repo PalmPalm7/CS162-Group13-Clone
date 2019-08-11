@@ -13,20 +13,6 @@ struct block *fs_device;
 
 static void do_format (void);
 
-static struct dir* 
-dir_open_current()
-{
-  struct dir *dir;
-  struct dir *work_dir = thread_current () -> work_dir;
-  if(work_dir == NULL)
-  {
-    dir = dir_open_root ();
-    work_dir = dir;
-  }
-  else
-    dir = work_dir;
-  return dir;
-}
 
 /* Initializes the file system module.
    If FORMAT is true, reformats the file system. */

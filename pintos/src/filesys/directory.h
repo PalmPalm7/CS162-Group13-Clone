@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include "devices/block.h"
 #include "filesys/off_t.h"
-
+#include "threads/thread.h"
 /* Maximum length of a file name component.
    This is the traditional UNIX maximum length.
    After directories are implemented, this maximum length may be
@@ -56,4 +56,7 @@ bool dir_readdir (struct dir *, char name[NAME_MAX + 1]);
 bool find_path(const struct dir *dir, const char *name,
                char *tail_name, struct dir *file_dir);
 
+struct dir_entry* dir_getdirent(const struct dir *dir, const char *name);
+struct dir* dir_open_current();
+    
 #endif /* filesys/directory.h */

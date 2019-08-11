@@ -49,6 +49,10 @@ syscall_handler (struct intr_frame *f)
       handle_exit(-1);
       thread_exit();
     } 
+  /*shared by subdirectory syscalls*/  
+  char tail_name[NAME_MAX+1] ;
+  struct thread *t = thread_current ();
+  struct dir *next_dir = (struct dir*) malloc (sizeof (struct dir));
 
   switch (args[0]) 
   {
@@ -120,7 +124,18 @@ syscall_handler (struct intr_frame *f)
                thread_exit();
              }
 
-  	   f->eax = filesys_create(args[1], args[2],IS_REG);
+           if( t -> work_dir == NULL)
+             t -> work_dir = dir_open_root ();
+           if(find_path( t-> work_dir, args[1], tail_name, next_dir))
+             { 
+               /* currently move to given directory, then move back*/
+               struct dir *temp = t -> work_dir;
+               t -> work_dir = next_dir;
+  	       f -> eax = filesys_create(args[1], args[2],IS_REG);
+               t -> work_dir = temp;
+             }
+           else
+             f -> eax = 0;
         }
         break;
 
@@ -151,6 +166,12 @@ syscall_handler (struct intr_frame *f)
        } 
      else 
        {
+         struct dir_entry* dirent = dir_getdirent (dir_open_current (), args[1]);
+         if(dirent == NULL || dirent -> type == IS_DIR)
+           {
+             f -> eax = -1;
+             break;
+           }
          struct file *open_file = filesys_open(args[1]);
     	  if (open_file != NULL)
             {
@@ -180,21 +201,18 @@ syscall_handler (struct intr_frame *f)
           f->eax = false;
           break;
         } 
-      char tail_name[NAME_MAX+1];
-      struct thread *t = thread_current(); 
-      struct dir next_dir;
       if (t -> work_dir == NULL)
         t -> work_dir = dir_open_root ();
-      if (find_path (t -> work_dir ,args[1], tail_name, &next_dir))
+      if (find_path (t -> work_dir ,args[1], tail_name, next_dir))
         {
           struct inode *in;
           dir_close (t -> work_dir);
-          dir_lookup (&next_dir, tail_name, &in);
-          dir_close (&next_dir);
+          dir_lookup (next_dir, tail_name, &in);
+          dir_close (next_dir);
           if (in != NULL)
             {
-              t -> work_dir = dir_open (inode_open (in));
-              f -> eax = false;
+              t -> work_dir = dir_open (in);
+              f -> eax = true;
               break;
             }
         }
@@ -209,19 +227,16 @@ syscall_handler (struct intr_frame *f)
           f->eax = false;
           break;
         }
-       char tail_name[NAME_MAX+1] ;
-       struct thread *t = thread_current ();
-       struct dir next_dir;
        if( t -> work_dir == NULL)
          t -> work_dir = dir_open_root ();
-       if(find_path( t-> work_dir, args[1], tail_name, &next_dir))
+       if(find_path( t-> work_dir, args[1], tail_name, next_dir))
          {
            struct inode *in;
            /* there is given directory in the path*/
-           if (dir_lookup(&next_dir, tail_name, &in))
+           if (dir_lookup(next_dir, tail_name, &in))
              {
                f->eax = false;
-               dir_close(&next_dir);
+               dir_close(next_dir);
                break;
              }
            else
@@ -229,9 +244,10 @@ syscall_handler (struct intr_frame *f)
                /* since filesys_create will always lookup working directory
                   we need to change current working directroy into next_dir*/
                struct dir* temp = t-> work_dir;
-               t -> work_dir = &next_dir;
+               t -> work_dir = next_dir;
                f -> eax = filesys_create(tail_name, 512, IS_DIR);
                t -> work_dir = temp;
+               dir_close(next_dir);
              }
          }
        else

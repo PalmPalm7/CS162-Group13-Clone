@@ -149,10 +149,11 @@ find_path(const struct dir *dir, const char *name,
     now_dir = dir_open_root ();
   else
     now_dir = dir; 
-  while ( get_next_part (file_name, &(name)))
+  int result;
+  while (result = get_next_part (file_name, &(name)))
   {
     /* before the function could get 0, it is iterating through the path*/
-    if (!strlen(name))
+    if (!strlen(name) || result == -1)
       {
         break;
       }  
@@ -171,7 +172,14 @@ find_path(const struct dir *dir, const char *name,
   return true;
 }
 
-
+struct dir_entry* 
+dir_getdirent(const struct dir *dir, const char *name)
+{
+  struct dir_entry* ent = (struct dir_entry*) malloc (sizeof (struct dir_entry));
+  if(lookup(dir, name, ent, NULL))
+    return ent;
+  return NULL;
+}
 /* Searches DIR for a file with the given NAME
    and returns true if one exists, false otherwise.
    On success, sets *INODE to an inode for the file, otherwise to
@@ -295,4 +303,20 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
         }
     }
   return false;
+}
+
+/* open work directory of the thread, or root*/
+struct dir*
+dir_open_current()
+{
+  struct dir *dir;
+  struct dir *work_dir = thread_current () -> work_dir;
+  if(work_dir == NULL)
+  {
+    dir = dir_open_root ();
+    work_dir = dir_open_root();
+  }
+  else
+    dir = dir_open (work_dir -> inode);
+  return dir;
 }
