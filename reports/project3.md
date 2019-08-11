@@ -21,3 +21,5 @@ was added.
 `dir_getdirent` is used to get the directory entry, which is helpful to check whether it is a directory, or implement the syscall.
 
 `dir_open_current` support work directory for the threads.
+
+Besides, the sohpiscated syscall related with subdirectory is very hard to implemented and far beyond our imagination on design phase.

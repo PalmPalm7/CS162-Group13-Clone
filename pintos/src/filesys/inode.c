@@ -149,24 +149,26 @@ void cache_write(struct block *block, const block_sector_t sector, void *data)
     lock_acquire(&(cache.cache_entrys[cache.entry_num].lock));
     cache.cache_entrys[cache.entry_num].sector = sector;
     cache.cache_entrys[cache.entry_num].ref_count = 0;
-    cache.cache_entrys[cache.entry_num].write = false;
+    cache.cache_entrys[cache.entry_num].write = true;
     memcpy(cache.cache_entrys[cache.entry_num].data, data, BLOCK_SECTOR_SIZE);
     lock_release(&(cache.cache_entrys[cache.entry_num].lock));
     cache.entry_num+=1;
   }
   lock_release(&(cache.entry_num_lock));
+  if (cache.entry_num < CACHE_SIZE)
+  return;
   lock_acquire(&(cache.entry_num_lock));
   if (cache.entry_num >= CACHE_SIZE)
   {
     lock_acquire(&(cache.cache_entrys[max_index].lock));
-    //if (cache.cache_entrys[max_index].write)
+    if (cache.cache_entrys[max_index].write)
     {
       block_write(fs_device,cache.cache_entrys[max_index].sector, \
       cache.cache_entrys[max_index].data);
     }
     cache.cache_entrys[max_index].sector = sector;
     cache.cache_entrys[max_index].ref_count = 0;
-    cache.cache_entrys[max_index].write = false;
+    cache.cache_entrys[max_index].write = true;
     memcpy(cache.cache_entrys[max_index].data, data, BLOCK_SECTOR_SIZE);
     lock_release(&(cache.cache_entrys[max_index].lock));
   }
