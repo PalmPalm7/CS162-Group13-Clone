@@ -13,13 +13,14 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
+#include "filesys/directory.h"
 
 struct file_info
   {
     int reader_count;
     int file_descriptor;
-    const char *file_name;
     struct file *file;
+    struct dir_entry* dirent; 
     struct list_elem elem;
     bool removed;
   };

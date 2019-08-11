@@ -6,20 +6,33 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
-/* A directory. */
-struct dir
-  {
-    struct inode *inode;                /* Backing store. */
-    off_t pos;                          /* Current position. */
-  };
-
-/* A single directory entry. */
-struct dir_entry
-  {
-    block_sector_t inode_sector;        /* Sector number of header. */
-    char name[NAME_MAX + 1];            /* Null terminated file name. */
-    bool in_use;                        /* In use or free? */
-  };
+/* Extracts a file name part from *SRCP into PART, and updates *SRCP so that the
+ * next call will return the next file name part. Returns 1 if successful, 0 at
+ * end of string, -1 for a too-long file name part. */
+static int
+get_next_part (char part[NAME_MAX + 1], const char **srcp) 
+{
+  const char *src = *srcp;
+  char *dst = part;
+  /* Skip leading slashes. If its all slashes, were done. */
+  while (*src == '/')
+    src++;
+  if (*src == '\0')
+    return 0;
+  /* Copy up to NAME_MAX character from SRC to DST. Add null terminator. */
+  while (*src != '/' && *src != '\0') 
+    {
+      if (dst < part + NAME_MAX)
+        *dst++ = *src; 
+        else 
+          return -1;
+        src++;
+    }
+    *dst = '\0';
+    /* Advance source pointer. */
+    *srcp = src;
+    return 1;
+}
 
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
@@ -111,6 +124,62 @@ lookup (const struct dir *dir, const char *name,
   return false;
 }
 
+/*find if there is any file on the given path,
+  which should invoke lookup for muitiple times,
+  return the tailed name of the path, and the 
+  path of working directory.
+  it is the caller`s responsibilty to close the
+  directory
+  once it failed, it will return false. */
+bool
+find_path(const struct dir *dir, const char *name,
+          char *tail_name, struct dir *file_dir)
+{
+  bool abs_path = false;
+ 
+  ASSERT(dir != NULL);
+  ASSERT(name != NULL);
+
+  /* if absolute path, then user root directory, and close it afterward*/
+  if(name[0] == '/')
+    abs_path = true;
+  char file_name[NAME_MAX+1];  
+  struct dir *now_dir;
+  if(abs_path)
+    now_dir = dir_open_root ();
+  else
+    now_dir = dir; 
+  int result;
+  while (result = get_next_part (file_name, &(name)))
+  {
+    /* before the function could get 0, it is iterating through the path*/
+    if (!strlen (name))
+      break;
+    if(result == -1)
+      return false;
+     struct inode *in;
+     if(!dir_lookup(now_dir, file_name, &in))
+       {
+          printf("path directory wrong\n");
+          return false;
+       }
+     if (now_dir != dir)
+       dir_close(now_dir);
+     now_dir = dir_open (in);
+  }
+  strlcpy (tail_name, file_name, NAME_MAX+1);
+  *(file_dir) = *(now_dir); 
+  return true;
+}
+
+struct dir_entry* 
+dir_getdirent(const struct dir *dir, const char *name)
+{
+  struct dir_entry* ent = (struct dir_entry*) malloc (sizeof (struct dir_entry));
+  if(lookup(dir, name, ent, NULL))
+    return ent;
+  return NULL;
+}
 /* Searches DIR for a file with the given NAME
    and returns true if one exists, false otherwise.
    On success, sets *INODE to an inode for the file, otherwise to
@@ -139,7 +208,7 @@ dir_lookup (const struct dir *dir, const char *name,
    Fails if NAME is invalid (i.e. too long) or a disk or memory
    error occurs. */
 bool
-dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
+dir_add (struct dir *dir, const char *name, block_sector_t inode_sector, int type)
 {
   struct dir_entry e;
   off_t ofs;
@@ -170,6 +239,7 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
 
   /* Write slot. */
   e.in_use = true;
+  e.type = type;
   strlcpy (e.name, name, sizeof e.name);
   e.inode_sector = inode_sector;
   success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
@@ -233,4 +303,20 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
         }
     }
   return false;
+}
+
+/* open work directory of the thread, or root*/
+struct dir*
+dir_open_current()
+{
+  struct dir *dir;
+  struct dir *work_dir = thread_current () -> work_dir;
+  if(work_dir == NULL)
+  {
+    dir = dir_open_root ();
+    work_dir = dir_open_root();
+  }
+  else
+    dir = dir_open (work_dir -> inode);
+  return dir;
 }

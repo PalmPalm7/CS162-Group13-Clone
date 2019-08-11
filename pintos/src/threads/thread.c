@@ -26,7 +26,7 @@ static struct list ready_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
-static struct list all_list;
+struct list all_list;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -191,6 +191,7 @@ thread_create (const char *name, int priority,
   list_init (&t->open_list);
 
   t->fd_count = 3;
+  t->work_dir = NULL;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -588,6 +589,7 @@ allocate_tid (void)
 
   return tid;
 }
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */

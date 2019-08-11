@@ -12,8 +12,6 @@
 #include "userprog/pagedir.h"
 #include "filesys/inode.h"
 
-
-
 static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
 struct file_info* create_files_struct(struct file *open_file);
@@ -51,6 +49,10 @@ syscall_handler (struct intr_frame *f)
       handle_exit(-1);
       thread_exit();
     } 
+  /*shared by subdirectory syscalls*/  
+  char tail_name[NAME_MAX+1] ;
+  struct thread *t = thread_current ();
+  struct dir *next_dir = (struct dir*) malloc (sizeof (struct dir));
 
   switch (args[0]) 
   {
@@ -123,8 +125,24 @@ syscall_handler (struct intr_frame *f)
                thread_exit();
              }
 
-  	   f->eax = filesys_create(args[1], args[2]);
-         }
+           if (args[1] == NULL || !strcmp(args[1], "")) 
+             {
+               f->eax = 0;
+               break;
+             } 
+           if( t -> work_dir == NULL)
+             t -> work_dir = dir_open_root ();
+           if(find_path( t-> work_dir, args[1], tail_name, next_dir))
+             { 
+               /* currently move to given directory, then move back*/
+               struct dir *temp = t -> work_dir;
+               t -> work_dir = next_dir;
+  	       f -> eax = filesys_create(tail_name, args[2],IS_REG);
+               t -> work_dir = temp;
+             }
+           else
+             f -> eax = 0;
+        }
         break;
 
      }
@@ -154,11 +172,18 @@ syscall_handler (struct intr_frame *f)
        } 
      else 
        {
+         struct dir_entry* dirent = dir_getdirent (dir_open_current (), args[1]);
+         if(dirent == NULL)
+           {
+             f -> eax = -1;
+             break;
+           }
+         
          struct file *open_file = filesys_open(args[1]);
     	  if (open_file != NULL)
             {
     	      struct file_info *f1 = create_files_struct (open_file);
-	      f1->file_name = args[1];
+              f1 -> dirent = dirent;
   	      list_push_back (&thread_current()->open_list, &f1->elem);
   	      f->eax = f1->file_descriptor;
   	    } 
@@ -176,7 +201,67 @@ syscall_handler (struct intr_frame *f)
        f->eax = write (args[1], (void *) args[2], args[3]);
        break;
     }
- 
+  case SYS_CHDIR:
+    {
+      if (args[1] == NULL || !strcmp(args[1], "")) 
+        {
+          f->eax = false;
+          break;
+        } 
+      if (t -> work_dir == NULL)
+        t -> work_dir = dir_open_root ();
+      if (find_path (t -> work_dir ,args[1], tail_name, next_dir))
+        {
+          struct inode *in;
+          dir_close (t -> work_dir);
+          dir_lookup (next_dir, tail_name, &in);
+          dir_close (next_dir);
+          if (in != NULL)
+            {
+              t -> work_dir = dir_open (in);
+              f -> eax = true;
+              break;
+            }
+        }
+      /* file not found or error path*/
+      f -> eax = false;
+      break;      
+    }
+  case SYS_MKDIR:
+    {
+      if (args[1] == NULL || !strcmp(args[1], "")) 
+        {
+          f->eax = false;
+          break;
+        }
+       if( t -> work_dir == NULL)
+         t -> work_dir = dir_open_root ();
+       if(find_path( t-> work_dir, args[1], tail_name, next_dir))
+         {
+           struct inode *in;
+           /* there is given directory in the path*/
+           if (dir_lookup(next_dir, tail_name, &in))
+             {
+               f->eax = false;
+               dir_close(next_dir);
+               break;
+             }
+           else
+             {
+               /* since filesys_create will always lookup working directory
+                  we need to change current working directroy into next_dir*/
+               struct dir* temp = t-> work_dir;
+               t -> work_dir = next_dir;
+               f -> eax = filesys_create(tail_name, 512, IS_DIR);
+               t -> work_dir = temp;
+               dir_close(next_dir);
+             }
+         }
+       else
+         f -> eax = false;
+       break;
+    }
+   
    default:
     {
       // TODO: Find the current file
@@ -210,6 +295,7 @@ syscall_handler (struct intr_frame *f)
                 {
                   list_remove(&curr_file->elem);
     	          file_close(curr_file->file);
+                  free(curr_file -> dirent);
     	          free(curr_file);
                  }
             }
@@ -239,8 +325,8 @@ int read (int fd, const void *buffer, unsigned length)
   else 
     {
       struct file_info *curr_file = files_helper (fd);
-      if (curr_file == NULL)
-      return -1;
+      if (curr_file == NULL || curr_file ->dirent ->type == IS_DIR)
+        return -1;
       int ret = file_read(curr_file->file, buffer, length);
       return ret;
     }
@@ -263,7 +349,7 @@ int write (int fd, const void *buffer, unsigned length)
   else 
     {
       struct file_info *curr_file = files_helper (fd);
-      if (curr_file == NULL)
+      if (curr_file == NULL || curr_file -> dirent -> type == IS_DIR)
         return -1;
       int ret = file_write(curr_file->file, buffer, length);
       return ret;
