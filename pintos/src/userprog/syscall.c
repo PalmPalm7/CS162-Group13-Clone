@@ -178,8 +178,8 @@ syscall_handler (struct intr_frame *f)
              f -> eax = -1;
              break;
            }
-         
-         struct file *open_file = filesys_open(args[1]);
+
+         struct file *open_file = file_open (inode_open (dirent -> inode_sector));
     	  if (open_file != NULL)
             {
     	      struct file_info *f1 = create_files_struct (open_file);
@@ -213,7 +213,8 @@ syscall_handler (struct intr_frame *f)
       if (find_path (t -> work_dir ,args[1], tail_name, next_dir))
         {
           struct inode *in;
-          dir_close (t -> work_dir);
+          if(t -> work_dir -> inode != next_dir -> inode)
+            dir_close (t -> work_dir);
           dir_lookup (next_dir, tail_name, &in);
           dir_close (next_dir);
           if (in != NULL)
@@ -234,9 +235,7 @@ syscall_handler (struct intr_frame *f)
           f->eax = false;
           break;
         }
-       if( t -> work_dir == NULL)
-         t -> work_dir = dir_open_root ();
-       if(find_path( t-> work_dir, args[1], tail_name, next_dir))
+       if(find_path(dir_open_current(), args[1], tail_name, next_dir))
          {
            struct inode *in;
            /* there is given directory in the path*/
@@ -261,7 +260,12 @@ syscall_handler (struct intr_frame *f)
          f -> eax = false;
        break;
     }
-   
+   case SYS_READDIR:
+     {
+       struct file_info *dir_fd = files_helper (args[1]);
+       struct dir *dir_r = dir_open ( inode_open(dir_fd -> dirent -> inode_sector));
+       f -> eax = dir_readdir(dir_r, args[2]);
+     }
    default:
     {
       // TODO: Find the current file

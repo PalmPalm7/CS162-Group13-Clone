@@ -176,7 +176,11 @@ struct dir_entry*
 dir_getdirent(const struct dir *dir, const char *name)
 {
   struct dir_entry* ent = (struct dir_entry*) malloc (sizeof (struct dir_entry));
-  if(lookup(dir, name, ent, NULL))
+  char tail_name[NAME_MAX +1];
+  off_t temp;
+  struct dir* now_dir = (struct dir*) malloc(sizeof (struct dir));
+  find_path(dir, name, &tail_name, now_dir);
+  if(lookup(now_dir, tail_name, ent, &temp))
     return ent;
   return NULL;
 }
@@ -317,6 +321,6 @@ dir_open_current()
     work_dir = dir_open_root();
   }
   else
-    dir = dir_open (work_dir -> inode);
+    dir = dir_open (inode_reopen (work_dir -> inode));
   return dir;
 }
