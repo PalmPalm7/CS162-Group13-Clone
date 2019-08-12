@@ -552,8 +552,12 @@ add_inode (struct inode *inode, off_t new_length)
   static char zeros[BLOCK_SECTOR_SIZE];
   memset(zeros, 0, BLOCK_SECTOR_SIZE);
 
-  if (new_sectors <= 0)
+  if (new_sectors <= 0) 
+  {
+    if (new_length > inode->data.length)
+      inode->data.length = new_length;
     return;
+  }
 
   if (current_sectors < 124)
     {
