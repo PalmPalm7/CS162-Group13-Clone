@@ -188,10 +188,15 @@ syscall_handler (struct intr_frame *f)
          struct file *open_file = file_open (inode_open (dirent -> inode_sector));
     	  if (open_file != NULL)
             {
-    	      struct file_info *f1 = create_files_struct (open_file);
-              f1 -> dirent = dirent;
-  	      list_push_back (&thread_current()->open_list, &f1->elem);
-  	      f->eax = f1->file_descriptor;
+    	      struct file_info *fi = create_files_struct (open_file);
+              fi -> dirent = dirent;
+  	      list_push_back (&thread_current()->open_list, &fi->elem);
+  	      f->eax = fi->file_descriptor;
+              if(dirent -> type == IS_DIR)
+                {
+                  file_close(fi -> file);
+                  fi -> file  = NULL;
+                }
   	    } 
           else 
             {
@@ -277,8 +282,9 @@ syscall_handler (struct intr_frame *f)
    case SYS_READDIR:
      {
        struct file_info *dir_fd = files_helper (args[1]);
-       struct dir *dir_r = dir_open (inode_open(dir_fd -> dirent -> inode_sector));
-       f -> eax = dir_readdir(dir_r, args[2]);
+       if(dir_fd -> file == NULL)
+          dir_fd -> file = dir_open (inode_open(dir_fd -> dirent -> inode_sector));
+       f -> eax = dir_readdir(dir_fd -> file, args[2]);
        break;
      }
    case SYS_ISDIR:
@@ -329,7 +335,10 @@ syscall_handler (struct intr_frame *f)
                       thread_current()->fd_count = thread_current()->fd_count - 1;
                     }
                   list_remove(&curr_file->elem);
-    	          file_close(curr_file->file);
+                  if(curr_file -> dirent -> type == IS_REG)
+    	            file_close (curr_file->file);
+                  else
+                    dir_close (curr_file ->file);
                   free(curr_file -> dirent);
     	          free(curr_file);
                  }
