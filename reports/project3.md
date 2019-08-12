@@ -27,4 +27,8 @@ Besides, the sohpiscated syscall related with subdirectory is very hard to imple
 here are the modified functions
 ```
 bool dir_readdir(struct dir* dir, const char* name)
+
+bool filesys_create (const char *name, off_t initial_size, int type)
+
+static void do_format (void)
 ```
