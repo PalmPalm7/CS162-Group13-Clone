@@ -223,6 +223,8 @@ byte_to_sector (const struct inode *inode, off_t pos)
     return -1;
 }
 
+/* Read the sector located at an offset.  For indirect and doubly indirect pointers only */ 
+
 block_sector_t
 read_sector (block_sector_t sector, off_t offset)
 {
@@ -477,7 +479,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
   off_t bytes_read = 0;
   uint8_t *bounce = NULL;
 
-  if (offset > inode->data.length)
+  if (offset >= inode->data.length)
   {
     static char zeros[BLOCK_SECTOR_SIZE];
     memset(zeros, 0, BLOCK_SECTOR_SIZE);
@@ -540,7 +542,7 @@ add_inode (struct inode *inode, off_t new_length)
     ++total_sectors;
 
   int current_sectors = inode->data.length / BLOCK_SECTOR_SIZE;
-  if (current_sectors * BLOCK_SECTOR_SIZE < new_length) 
+  if (current_sectors * BLOCK_SECTOR_SIZE < inode->data.length) 
     ++current_sectors;  
 
   int new_sectors = total_sectors - current_sectors;
@@ -636,6 +638,7 @@ add_inode (struct inode *inode, off_t new_length)
               cache_write (fs_device, disk_inode->doubly_indirect, doubly_indirect_blocks);
           }
     }
+  inode->data.length = new_length;
   return;
 }
 
