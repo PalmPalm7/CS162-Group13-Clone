@@ -502,3 +502,8 @@ inode_length (const struct inode *inode)
 {
   return inode->data.length;
 }
+
+bool inode_removed(struct inode* inode)
+  {
+    return inode -> removed;
+  }

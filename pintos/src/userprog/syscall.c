@@ -324,6 +324,10 @@ syscall_handler (struct intr_frame *f)
                  }
                else 
                 {
+                  if (curr_file->file_descriptor == thread_current()->fd_count) 
+                    {
+                      thread_current()->fd_count = thread_current()->fd_count - 1;
+                    }
                   list_remove(&curr_file->elem);
     	          file_close(curr_file->file);
                   free(curr_file -> dirent);
@@ -438,9 +442,6 @@ files_helper (int fd)
       f = list_entry (e, struct file_info, elem);
       if (f->file_descriptor == fd)
       {
-        if (f->file_descriptor == maxfd) {
-          thread_current()->fd_count = thread_current()->fd_count - 1;
-        }
         return f;
       }
       if (f->file_descriptor >= maxfd) {

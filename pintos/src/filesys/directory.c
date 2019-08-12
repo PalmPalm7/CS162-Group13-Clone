@@ -141,6 +141,19 @@ find_path(const struct dir *dir, const char *name,
     dir = dir_open_current(); 
   ASSERT(name != NULL);
 
+  /*for a removed dir, always return false*/
+  if(inode_removed(dir -> inode))
+    return false;
+
+  /*if root path, return root with . entry*/
+  if(!strcmp (name, "/"))
+    {
+      tail_name[0] = '.';
+      tail_name[1] = '\0';
+      *file_dir = *(dir_open_root());
+      return true;
+    }
+
   /* if absolute path, then user root directory, and close it afterward*/
   if(name[0] == '/')
     abs_path = true;
@@ -270,7 +283,7 @@ dir_remove (struct dir *dir, const char *name)
   if (!lookup (dir, name, &e, &ofs))
     goto done;
 
-  /* remove for the directory*/
+  /* remove for the directory, it just check if there is any file*/
   if(e.type == IS_DIR)
     {
       struct dir* dying_dir = dir_open (inode_open (e.inode_sector));
@@ -281,6 +294,12 @@ dir_remove (struct dir *dir, const char *name)
           dir_close(dying_dir);
           goto done;
         }
+      /* ban the directory access*/
+      struct dir_entry e;
+      lookup (dir, ".", &e, NULL);
+      e.in_use = false;
+      lookup (dir,"..", &e, NULL);
+      e.in_use = false;
       dir_close(dying_dir);
    }
  
