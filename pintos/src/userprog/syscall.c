@@ -261,14 +261,26 @@ syscall_handler (struct intr_frame *f)
                   we need to change current working directroy into next_dir*/
                struct dir* temp = t-> work_dir;
                t -> work_dir = next_dir;
-               f -> eax = filesys_create(tail_name, 512, IS_DIR);
+               bool success = filesys_create(tail_name, 512, IS_DIR);
+               f -> eax = success;
+               if (!success)
+               {
+                 t -> work_dir = temp;
+                 dir_close(next_dir);
+                 break;
+               }
                /* dive into the newly create directory, then add . and .. into it*/
                struct inode* new_dir_inode;
                dir_lookup(next_dir, tail_name, &new_dir_inode);
                struct dir* new_dir = dir_open (new_dir_inode);
-               dir_add (next_dir, "..", inode_get_inumber(next_dir -> inode), IS_DIR);
-               dir_add (new_dir, ".", inode_get_inumber(new_dir -> inode), IS_DIR);
-               dir_close(new_dir);
+               if(!dir_add (new_dir, "..", inode_get_inumber(next_dir -> inode), IS_DIR)
+                ||!dir_add (new_dir, ".", inode_get_inumber(new_dir -> inode), IS_DIR))
+                {
+                  
+                  dir_close(new_dir);
+                  dir_remove(next_dir, tail_name);
+                  f -> eax = false;
+                }
 
                t -> work_dir = temp;
                dir_close(next_dir);
