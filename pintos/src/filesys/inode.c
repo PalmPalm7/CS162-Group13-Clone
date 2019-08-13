@@ -64,16 +64,16 @@ void cache_write(struct block *block, const block_sector_t sector, void *data);
 
 void cache_init()
 {
-    cache.entry_num = 0;
-    lock_init (&(cache.entry_num_lock));
-    int i = 0;
-    for( i = 0; i < CACHE_SIZE; i++)
-      {
-        cache.cache_entrys[i].sector = -1;
-        cache.cache_entrys[i].ref_count = 0;
-        lock_init(&(cache.cache_entrys[i].lock));
-        cache.cache_entrys[i].write = false;
-      }
+  cache.entry_num = 0;
+  lock_init (&(cache.entry_num_lock));
+  int i = 0;
+  for( i = 0; i < CACHE_SIZE; i++)
+    {
+      cache.cache_entrys[i].sector = -1;
+      cache.cache_entrys[i].ref_count = 0;
+      lock_init(&(cache.cache_entrys[i].lock));
+      cache.cache_entrys[i].write = false;
+    }
 }
 
 
@@ -81,7 +81,8 @@ bool cache_read(struct block *block, const block_sector_t sector, void *data)
 {
   (char*)data;
   int i = 0;
-  bool found = false; 
+  bool found = false;
+  lock_acquire(&cache.entry_num_lock);
   for ( i = 0; i < cache.entry_num; i++)
     {
       lock_acquire(&(cache.cache_entrys[i].lock));
@@ -97,22 +98,44 @@ bool cache_read(struct block *block, const block_sector_t sector, void *data)
       }
       lock_release(&(cache.cache_entrys[i].lock));
     }
+  lock_release(&cache.entry_num_lock);
   if (found)
   {
     return found;
   }
+
+  lock_acquire(&cache.entry_num_lock);
+  for (i = 0; i < cache.entry_num; i++)
+    {
+      lock_acquire(&(cache.cache_entrys[i].lock));
+      cache.cache_entrys[i].ref_count -= 1;
+      lock_release(&(cache.cache_entrys[i].lock));
+    }
+  lock_release(&cache.entry_num_lock);
+
+
   block_read (fs_device,sector,(void*)data);
-  cache_write (fs_device,sector,(void*)data);
+
+  cache_write (fs_device,sector,data);
   return found;
+}
+
+void cache_read_bytes(fs_deive, const block_sector_t block, void *buff, int offset, int size )
+{
+  
+
 }
 
 void cache_write(struct block *block, const block_sector_t sector, void *data)
 {
+  
   (char*)data;
   int i = 0; 
   int replace = 0;
   int max_index = 0, max = 0;
   int found = 0;
+  
+  lock_acquire(&cache.entry_num_lock);
   for ( i = 0; i < cache.entry_num; i++)
   {
     lock_acquire (&(cache.cache_entrys[i].lock));
@@ -133,6 +156,7 @@ void cache_write(struct block *block, const block_sector_t sector, void *data)
     }
     lock_release (&(cache.cache_entrys[i].lock));
   }
+  lock_release(&cache.entry_num_lock);
   if (found)
   {
     lock_acquire(&(cache.cache_entrys[replace].lock));
@@ -157,8 +181,9 @@ void cache_write(struct block *block, const block_sector_t sector, void *data)
   lock_release(&(cache.entry_num_lock));
   if (cache.entry_num < CACHE_SIZE)
   return;
+
   lock_acquire(&(cache.entry_num_lock));
-  if (cache.entry_num >= CACHE_SIZE)
+  if (cache.entry_num == CACHE_SIZE)
   {
     lock_acquire(&(cache.cache_entrys[max_index].lock));
     if (cache.cache_entrys[max_index].write)
@@ -176,15 +201,17 @@ void cache_write(struct block *block, const block_sector_t sector, void *data)
 }
 
 
-
-
 void cache_sync()
 {
   int i = 0;
-  for (i = 0; i < CACHE_SIZE ; i++)
+  lock_acquire(&cache.entry_num_lock);
+  for (i = 0; i < cache.entry_num ; i++)
   {
+    lock_acquire(&(cache.cache_entrys[i].lock));
     block_write(fs_device,cache.cache_entrys[i].sector,cache.cache_entrys[i].data);
+    lock_release(&(cache.cache_entrys[i].lock));
   }
+  lock_release(&cache.entry_num_lock);
 };
 
 
@@ -361,7 +388,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
 {
   uint8_t *buffer = buffer_;
   off_t bytes_read = 0;
-  uint8_t *bounce = NULL;
+  //uint8_t *bounce = NULL;
 
   while (size > 0)
     {

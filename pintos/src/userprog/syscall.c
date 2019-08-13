@@ -85,7 +85,6 @@ syscall_handler (struct intr_frame *f)
       }
     case SYS_HALT: 
       {
-        cache_sync();
         shutdown_power_off();
       }
     case SYS_READ:
