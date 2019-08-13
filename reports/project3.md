@@ -1,7 +1,6 @@
 Final Report for Project 3: File System
 =======================================
-
-### Task 1
+## Task 1
 There is a lot of modifications comparing with the initial design of cache.
 we change the following things:
 
@@ -14,8 +13,10 @@ For the synchroniztion of  accessing cache what we do is very simple but effecti
 
 There is a redundant member variable `write` in `cache_entry` which is used for denoting this entry should be write back or not. However we have to write back entry in cache to disk bacause  before we swap it out we don't do anything to the corresponded disk sector.
 
+## Task 2
+At the suggestion of the TA, the number of direct inodes were increased to 124.  The function `inode_write_at` was designed to expand the file to the necessary length prior to attempting to write to the file.  The new design incorporates a modified `byte_to_sector` function that properly returns the inode sector desired.  Furthermore, `inode_close` now iterates through every allocated sector for a given `inode_disk` and frees their mapping for future use.  Multiple helper functions: `add_inode`, `read_sector`, and `deallocate_inode` were added to assist with `inode_write_at`, `byte_to_sector`, and `inode_close` respectively. There was no additional mapping function used as that idea from the design document was scrapped.
 
-### Task 3
+## Task 3
 We modified a lot compared with the formal design doc.
 in directory.c
 
@@ -57,13 +58,7 @@ for `CHDIR`, we first use `find_path` to get the real directory that contains th
 
 for `MKDIR`, we use `find_path` to get the real directory(current directory was stored in a `temp` pointer), then see if it contains such directory. If not, we create a new file with directory type, then we open up the new directory, and add . and .. directory entry, then close the new directory, and switch working directory back to `temp`, then close the real directory that stores the new directory.
 
+## Reflection
 
-###Reflection 
-Josh:
-
-Wenzheng Guo(Gary): Writing the Task1 and answering the addtional question for design doc. Completing the requirement of Task1 for coding.
-
-Zuxin Li:
-
-Handi Xie:
-
+Josh primarily handled the second task, extendable files in both documents and implemented it in Pintos.  Zuxin worked on the third task dealing with directories for the final report as well as coding it.  Gary completed and explained the buffer cache in Pintos and both documents. Handi wrote the student testing report and was in charge of overall synchronization.  
+Timeliness was once again a fairly large issue as the group had to eventually resort to a 6 hour worksession on Monday to focus on the persistence tests, the `dir-vine` test, and the student testing document.
