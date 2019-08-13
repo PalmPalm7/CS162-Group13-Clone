@@ -373,10 +373,15 @@ inode_create (block_sector_t sector, off_t length)
             success = true;
           }
         }
-      if (sector_count > 0)
+      if (sector_count > 0) 
+      {
         cache_write (fs_device, sector, disk_inode);   
+      }
       else
+      {
+        cache_write (fs_device, sector, disk_inode);   
         success = true;
+      }
       free (disk_inode);
     }
   return success;
@@ -569,7 +574,7 @@ add_inode (struct inode_disk *disk_inode, off_t new_length)
   if (current_sectors < 124)
     {
     if (total_sectors > 124)
-      new_sectors -= 124;
+      new_sectors -= 124 - current_sectors;
     else 
       new_sectors = 0;
       
@@ -587,7 +592,10 @@ add_inode (struct inode_disk *disk_inode, off_t new_length)
 
   if (new_sectors > 0 && current_sectors < 124 + 128)
     {
-      new_sectors -= 128;
+      if (total_sectors > 124 + 128)
+        new_sectors -= 128 - current_sectors;
+      else 
+        new_sectors = 0;
       block_sector_t indirect_blocks[128];
 
       if (current_sectors == 124)
@@ -617,14 +625,13 @@ add_inode (struct inode_disk *disk_inode, off_t new_length)
 
   if (new_sectors > 0)
     {
-      if (free_map_allocate (1, &disk_inode->doubly_indirect))
-          {
 
             block_sector_t doubly_indirect_blocks[128];
 
             if (current_sectors == 124 + 128)
             {
-              free_map_allocate (1, &doubly_indirect_blocks);                
+              free_map_allocate (1, &disk_inode->doubly_indirect);
+              cache_read(fs_device, zeros, doubly_indirect_blocks);
             }
             else
             {
@@ -668,7 +675,7 @@ add_inode (struct inode_disk *disk_inode, off_t new_length)
 
             // Cache doubly indirect inode
               cache_write (fs_device, disk_inode->doubly_indirect, doubly_indirect_blocks);
-          }
+          
     }
   disk_inode->length = new_length;
 
