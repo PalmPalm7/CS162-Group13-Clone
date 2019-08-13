@@ -7,6 +7,10 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
+#include "devices/ide.h"
+#include "threads/malloc.h"
+#include "devices/block.h"
+
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -65,6 +69,7 @@ struct block_cache cache;
 block_sector_t read_sector (block_sector_t sector, off_t offset);
 
 void cache_write(struct block *block, const block_sector_t sector, void *data);
+void deallocate_inode(struct inode_disk *disk_inode);
 
 void cache_init()
 {
@@ -105,6 +110,8 @@ bool cache_read(struct block *block, const block_sector_t sector, void *data)
   {
     return found;
   }
+  // if (sector >= ((block*) fs_device)->size)
+  //   return -1;
   block_read (fs_device,sector,(void*)data);
   cache_write (fs_device,sector,(void*)data);
   return found;
@@ -196,7 +203,6 @@ void cache_sync()
    within INODE.
    Returns -1 if INODE does not contain data for a byte at offset
    POS. */
-//-> doesn't work, need to actually read the contents of that sector
 static block_sector_t
 byte_to_sector (const struct inode *inode, off_t pos)
 {
@@ -461,6 +467,9 @@ inode_close (struct inode *inode)
       /* Deallocate blocks if removed. */
       if (inode->removed)
         {
+          struct inode_disk disk_inode;
+          cache_read(fs_device, inode->sector, &disk_inode);
+          deallocate_inode(&disk_inode);
           free_map_release (inode->sector, 1);
           // free_map_release (inode->data.direct[0],
                             // bytes_to_sectors (inode->data.length));
@@ -468,6 +477,71 @@ inode_close (struct inode *inode)
 
       free (inode);
     }
+}
+
+void
+deallocate_inode(struct inode_disk *disk_inode)
+{
+  int old_length = disk_inode->length;
+  int total_sectors = old_length / BLOCK_SECTOR_SIZE;
+  if (total_sectors * BLOCK_SECTOR_SIZE < old_length) 
+    ++total_sectors;
+  int remaining_sectors = total_sectors;
+
+  static char zeros[BLOCK_SECTOR_SIZE];
+  memset(zeros, 0, BLOCK_SECTOR_SIZE);
+
+  if (total_sectors <= 0) 
+  {
+    return;
+  }
+      
+  // Deallocate direct inodes
+  int j;
+  for (j = 0; j < total_sectors && j < 124; j++) 
+  {
+    free_map_release(disk_inode->direct[j], 1);
+    remaining_sectors = remaining_sectors - 1;
+  }
+
+  if (remaining_sectors > 0)
+    {
+      block_sector_t indirect_blocks[128]; 
+      cache_read(fs_device, &disk_inode->indirect, indirect_blocks);
+      int j = 0;
+      for (j = 0; j < 128 && remaining_sectors > 0; j++) 
+        {
+        free_map_release(indirect_blocks[j], 1);
+        remaining_sectors -= 1;
+        }
+      free_map_release(disk_inode->indirect, 1);
+    }
+
+  if (remaining_sectors > 0)
+  {
+
+    block_sector_t doubly_indirect_blocks[128];
+    cache_read(fs_device, &disk_inode->doubly_indirect, doubly_indirect_blocks);
+
+    int j = 0;
+    for (j = 0; j < 128 && remaining_sectors > 0; j++) 
+    {
+
+      block_sector_t inner_doubly_indirect_blocks[128];
+      cache_read(fs_device, doubly_indirect_blocks[j], inner_doubly_indirect_blocks);
+
+      int k;
+      for (k = 0; k < 128 && remaining_sectors > 0; k++) 
+      {
+        free_map_release(inner_doubly_indirect_blocks[k], 1);
+        remaining_sectors -= 1;
+      }
+      free_map_release(doubly_indirect_blocks[j], 1);
+    }
+    free_map_release(disk_inode->doubly_indirect, 1);
+          
+  }
+  return;
 }
 
 /* Marks INODE to be deleted when it is closed by the last caller who
@@ -490,7 +564,10 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
   uint8_t *bounce = NULL;
 
   struct inode_disk disk_inode;
-
+  // if (inode->removed)
+  //   return -1;
+  if (inode->sector > 20000000)
+    return -1;
   cache_read(fs_device, inode->sector, &disk_inode);
 
   if (offset >= disk_inode.length)
@@ -505,6 +582,8 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
     {
       /* Disk sector to read, starting byte offset within sector. */
       block_sector_t sector_idx = byte_to_sector (inode, offset);
+      if (sector_idx > 20000000)
+        return -1;
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -700,6 +779,9 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
   if (inode->deny_write_cnt)
     return 0;
+  // if (inode->removed)
+  //   return -1;
+
 
   struct inode_disk disk_inode;
 
@@ -712,7 +794,10 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     {
       /* Sector to write, starting byte offset within sector. */
       block_sector_t sector_idx = byte_to_sector (inode, offset);
+      if (sector_idx > 20000000)
+        return -1;
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
+
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
       off_t inode_left = inode_length (inode) - offset;
