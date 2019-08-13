@@ -1,6 +1,20 @@
 Final Report for Project 3: File System
 =======================================
 
+### Task 1
+There is a lot of modifications comparing with the initial design of cache.
+we change the following things:
+
+1.  we use the lock `entry_num_lock` and `lock` in each cache entry  instead of disabling interrupts to accomplish exclusively accessing the the `entry_num` and entries of cache. Because  disabling interrupts cost a lot and the frequency of query cache is very high and if we do use disabling interrrupts as sychronization methods it may bring a lot of  unecessary overhead.
+2. we still keep `ref_count `  in the `cache_entry` however the funtion of this member variable changes. We use it to realize the **Clock Algrithm** rather than **LFU Algrithm** which only takes the hitting times into consideration while ignore the influence of order of each accessing.
+3. We directly use `cache_read` and `cache_write` to replace the `block_read` and `block_write` instead of using wrapper function `cache_block_ read` and `cache_block_write` to do so.
+4. we add two functions `cache_read_bytes ` and `cache_write_bytes ` to do the sectors to bytes translation so we don't have to use any `bounce` in `inode` functions.
+
+For the synchroniztion of  accessing cache what we do is very simple but effective. No matter what operation we want to do for a cache entry we should get the lock of each entry firstly, in this way, we treat read and write equally and they also  exclusively access same entry.
+
+There is a redundant member variable `write` in `cache_entry` which is used for denoting this entry should be write back or not. However we have to write back entry in cache to disk bacause  before we swap it out we don't do anything to the corresponded disk sector.
+
+
 ### Task 3
 We modified a lot compared with the formal design doc.
 in directory.c
@@ -37,3 +51,12 @@ And the syscall are not implemented as planned as well
 for `CHDIR`, we first use `find_path` to get the real directory that contains the target directory, then open up the real directory, and forward current work directory into the real directory, then if there exist target directory, we open it, then we forward current work directory into the directory and return true.
 
 for `MKDIR`, we use `find_path` to get the real directory(current directory was stored in a `temp` pointer), then see if it contains such directory. If not, we create a new file with directory type, then we open up the new directory, and add . and .. directory entry, then close the new directory, and switch working directory back to `temp`, then close the real directory that stores the new directory.
+
+###Reflection 
+Josh:
+
+Wenzheng Guo(Gary): Writing the Task1 and answering the addtional question for design doc. Completing the requirement of Task1 for coding.
+
+Zuxin Li:
+
+Handi Xie:
