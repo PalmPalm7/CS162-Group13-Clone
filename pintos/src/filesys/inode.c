@@ -8,6 +8,7 @@
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
 
+/* Testing Git */
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
 
