@@ -7,10 +7,6 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
-#include "devices/ide.h"
-#include "threads/malloc.h"
-#include "devices/block.h"
-
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -110,8 +106,6 @@ bool cache_read(struct block *block, const block_sector_t sector, void *data)
   {
     return found;
   }
-  // if (sector >= ((block*) fs_device)->size)
-  //   return -1;
   block_read (fs_device,sector,(void*)data);
   cache_write (fs_device,sector,(void*)data);
   return found;
@@ -563,11 +557,10 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
   off_t bytes_read = 0;
   uint8_t *bounce = NULL;
 
-  struct inode_disk disk_inode;
-  // if (inode->removed)
-  //   return -1;
   if (inode->sector > 20000000)
     return -1;
+  struct inode_disk disk_inode;
+
   cache_read(fs_device, inode->sector, &disk_inode);
 
   if (offset >= disk_inode.length)
@@ -582,8 +575,6 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
     {
       /* Disk sector to read, starting byte offset within sector. */
       block_sector_t sector_idx = byte_to_sector (inode, offset);
-      if (sector_idx > 20000000)
-        return -1;
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -779,9 +770,6 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
   if (inode->deny_write_cnt)
     return 0;
-  // if (inode->removed)
-  //   return -1;
-
 
   struct inode_disk disk_inode;
 
@@ -794,10 +782,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     {
       /* Sector to write, starting byte offset within sector. */
       block_sector_t sector_idx = byte_to_sector (inode, offset);
-      if (sector_idx > 20000000)
-        return -1;
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
-
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
       off_t inode_left = inode_length (inode) - offset;
