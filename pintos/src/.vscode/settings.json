@@ -15,7 +15,14 @@
         "system_error": "cpp",
         "tuple": "cpp",
         "type_traits": "cpp",
-        "palloc.h": "c"
+        "palloc.h": "c",
+        "main.h": "c",
+        "syn-rw.h": "c",
+        "lib.h": "c",
+        "syscall.h": "c",
+        "string.h": "c",
+        "inode.h": "c",
+        "random.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

@@ -10,7 +10,9 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
+#include "filesys/filesys.h"
 #include "filesys/inode.h"
+#include "devices/block.h"
 
 static void syscall_handler (struct intr_frame *f);
 struct file_info* files_helper (int fd);
@@ -296,6 +298,16 @@ syscall_handler (struct intr_frame *f)
      {
        struct file_info *dir_fd = files_helper (args[1]);
        f -> eax = dir_fd -> dirent -> inode_sector;
+       break;
+     }
+   case SYS_BUFFER_READCNT:
+     {
+       f -> eax = block_print_read_cnt (fs_device);
+       break;
+     }
+   case SYS_BUFFER_WRITECNT:
+     {
+       f -> eax = block_print_write_cnt (fs_device);
        break;
      }
    default:

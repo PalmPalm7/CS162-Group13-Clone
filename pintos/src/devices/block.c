@@ -124,6 +124,12 @@ block_read (struct block *block, block_sector_t sector, void *buffer)
   block->ops->read (block->aux, sector, buffer);
   block->read_cnt++;
 }
+/* Returns read_cnt of a block*/
+unsigned long long
+block_print_read_cnt (struct block *block)
+{
+  return block->read_cnt;
+}
 
 /* Write sector SECTOR to BLOCK from BUFFER, which must contain
    BLOCK_SECTOR_SIZE bytes.  Returns after the block device has
@@ -137,6 +143,13 @@ block_write (struct block *block, block_sector_t sector, const void *buffer)
   ASSERT (block->type != BLOCK_FOREIGN);
   block->ops->write (block->aux, sector, buffer);
   block->write_cnt++;
+}
+
+/* Returns write_cnt of a block*/
+unsigned long long
+block_print_write_cnt (struct block *block)
+{
+  return block->write_cnt;
 }
 
 /* Returns the number of sectors in BLOCK. */

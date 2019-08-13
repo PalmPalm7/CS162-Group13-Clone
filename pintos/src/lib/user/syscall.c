@@ -188,3 +188,15 @@ inumber (int fd)
 {
   return syscall1 (SYS_INUMBER, fd);
 }
+
+int
+buffer_readcnt()
+{
+  return syscall0 (SYS_BUFFER_READCNT);
+}
+
+int
+buffer_writecnt()
+{
+  return syscall0 (SYS_BUFFER_WRITECNT);
+}
