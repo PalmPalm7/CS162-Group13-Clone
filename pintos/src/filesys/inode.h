@@ -20,4 +20,5 @@ void inode_deny_write (struct inode *);
 void inode_allow_write (struct inode *);
 off_t inode_length (const struct inode *);
 bool inode_removed(struct inode* inode);
+void cache_write(struct block *block, const block_sector_t sector, void *data);
 #endif /* filesys/inode.h */

@@ -15,6 +15,11 @@
         "main.h": "c",
         "lib.h": "c",
         "filesys.h": "c",
-        "ostream": "c"
+        "ostream": "c",
+        "string": "c",
+        "array": "c",
+        "string_view": "c",
+        "iterator": "c",
+        "vector": "c"
     }
 }

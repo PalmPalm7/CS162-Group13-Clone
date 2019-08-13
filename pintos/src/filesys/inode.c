@@ -8,6 +8,7 @@
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
 
+
 /* Testing Git 2*/
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -22,7 +23,6 @@ struct inode_disk
     block_sector_t doubly_indirect; /* a doubly indirect pointer */
     off_t length;                       /* File size in bytes. */
     unsigned magic;                     /* Magic number. */
-    // uint32_t unused[125];               /* Not used. */
   };
 
 
@@ -42,7 +42,6 @@ struct inode
     int open_cnt;                       /* Number of openers. */
     bool removed;                       /* True if deleted, false otherwise. */
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
-    // struct inode_disk data;             /* Inode content. */
   };
 
 struct cache_entry
@@ -67,7 +66,6 @@ block_sector_t read_sector (block_sector_t sector, off_t offset);
 
 void cache_write(struct block *block, const block_sector_t sector, void *data);
 
-
 void cache_init()
 {
   cache.entry_num = 0;
@@ -82,51 +80,53 @@ void cache_init()
     }
 }
 
-
-bool cache_read(struct block *block, const block_sector_t sector, void *data)
+bool 
+cache_read(struct block *block, const block_sector_t sector, void *data)
 {
+
+
   (char*)data;
   int i = 0;
   bool found = false;
-  lock_acquire(&cache.entry_num_lock);
+  lock_acquire (&cache.entry_num_lock);
   for ( i = 0; i < cache.entry_num; i++)
     {
-      lock_acquire(&(cache.cache_entrys[i].lock));
+      lock_acquire (&(cache.cache_entrys[i].lock));
       if (cache.cache_entrys[i].sector == sector )
       {
         cache.cache_entrys[i].ref_count = 0;
-        memcpy(data, cache.cache_entrys[i].data, BLOCK_SECTOR_SIZE);
+        memcpy (data, cache.cache_entrys[i].data, BLOCK_SECTOR_SIZE);
         found = true;
       }
       else
       {
         cache.cache_entrys[i].ref_count+=1;
       }
-      lock_release(&(cache.cache_entrys[i].lock));
+      lock_release (&(cache.cache_entrys[i].lock));
     }
-  lock_release(&cache.entry_num_lock);
+  lock_release (&cache.entry_num_lock);
   if (found)
   {
     return found;
   }
-
   lock_acquire(&cache.entry_num_lock);
   for (i = 0; i < cache.entry_num; i++)
     {
-      lock_acquire(&(cache.cache_entrys[i].lock));
+      lock_acquire (&(cache.cache_entrys[i].lock));
       cache.cache_entrys[i].ref_count -= 1;
-      lock_release(&(cache.cache_entrys[i].lock));
+      lock_release (&(cache.cache_entrys[i].lock));
     }
-  lock_release(&cache.entry_num_lock);
-
-
+  lock_release (&cache.entry_num_lock);
   block_read (fs_device,sector,(void*)data);
-
   cache_write (fs_device,sector,data);
   return found;
+
+  
 }
 
-void cache_read_bytes(struct block *block, const block_sector_t sector_idx, void *buff, int offset, int size)
+void 
+cache_read_bytes (struct block *block, const block_sector_t sector_idx, \
+ void *buff, int offset, int size)
 {
   uint8_t *bounce = NULL;
   bounce = malloc(BLOCK_SECTOR_SIZE);
@@ -137,20 +137,20 @@ void cache_read_bytes(struct block *block, const block_sector_t sector_idx, void
       return;
   }
   cache_read (block, sector_idx, bounce);
-  memcpy(buff, bounce + offset, size);
-  free(bounce);
+  memcpy (buff, bounce + offset, size);
+  free (bounce);
 }
 
-void cache_write(struct block *block, const block_sector_t sector, void *data)
+void 
+cache_write (struct block *block, const block_sector_t sector, void *data)
 {
-  
   (char*)data;
   int i = 0; 
   int replace = 0;
   int max_index = 0, max = 0;
   int found = 0;
   
-  lock_acquire(&cache.entry_num_lock);
+  lock_acquire (&cache.entry_num_lock);
   for ( i = 0; i < cache.entry_num; i++)
   {
     lock_acquire (&(cache.cache_entrys[i].lock));
@@ -174,48 +174,51 @@ void cache_write(struct block *block, const block_sector_t sector, void *data)
   lock_release(&cache.entry_num_lock);
   if (found)
   {
-    lock_acquire(&(cache.cache_entrys[replace].lock));
+    lock_acquire (&(cache.cache_entrys[replace].lock));
     cache.cache_entrys[replace].sector = sector;
     cache.cache_entrys[replace].ref_count = 0;
     cache.cache_entrys[replace].write = true;
-    memcpy(cache.cache_entrys[replace].data, data, BLOCK_SECTOR_SIZE);
-    lock_release(&(cache.cache_entrys[replace].lock));
+    memcpy (cache.cache_entrys[replace].data, data, BLOCK_SECTOR_SIZE);
+    lock_release (&(cache.cache_entrys[replace].lock));
     return;
   }
-  lock_acquire(&(cache.entry_num_lock));
+  lock_acquire (&(cache.entry_num_lock));
   if (cache.entry_num < CACHE_SIZE)
   {
-    lock_acquire(&(cache.cache_entrys[cache.entry_num].lock));
+    lock_acquire (&(cache.cache_entrys[cache.entry_num].lock));
     cache.cache_entrys[cache.entry_num].sector = sector;
     cache.cache_entrys[cache.entry_num].ref_count = 0;
     cache.cache_entrys[cache.entry_num].write = true;
-    memcpy(cache.cache_entrys[cache.entry_num].data, data, BLOCK_SECTOR_SIZE);
-    lock_release(&(cache.cache_entrys[cache.entry_num].lock));
+    memcpy (cache.cache_entrys[cache.entry_num].data, data, BLOCK_SECTOR_SIZE);
+    lock_release (&(cache.cache_entrys[cache.entry_num].lock));
     cache.entry_num+=1;
   }
-  lock_release(&(cache.entry_num_lock));
+  lock_release (&(cache.entry_num_lock));
   if (cache.entry_num < CACHE_SIZE)
   return;
 
   lock_acquire(&(cache.entry_num_lock));
   if (cache.entry_num == CACHE_SIZE)
   {
-    lock_acquire(&(cache.cache_entrys[max_index].lock));
+    lock_acquire (&(cache.cache_entrys[max_index].lock));
     if (cache.cache_entrys[max_index].write)
     {
-      block_write(fs_device,cache.cache_entrys[max_index].sector, \
+      block_write (fs_device,cache.cache_entrys[max_index].sector, \
       cache.cache_entrys[max_index].data);
     }
     cache.cache_entrys[max_index].sector = sector;
     cache.cache_entrys[max_index].ref_count = 0;
     cache.cache_entrys[max_index].write = true;
-    memcpy(cache.cache_entrys[max_index].data, data, BLOCK_SECTOR_SIZE);
-    lock_release(&(cache.cache_entrys[max_index].lock));
+    memcpy (cache.cache_entrys[max_index].data, data, BLOCK_SECTOR_SIZE);
+    lock_release (&(cache.cache_entrys[max_index].lock));
   }
-  lock_release(&(cache.entry_num_lock));
+  lock_release (&(cache.entry_num_lock));
+
 }
 
-bool cache_write_bytes(struct block *block, const block_sector_t sector_idx, void *buffer, int sector_ofs, int chunk_size,int sector_left)
+bool 
+cache_write_bytes (struct block *block, const block_sector_t sector_idx,  \
+void *buffer, int sector_ofs, int chunk_size,int sector_left)
 {
   uint8_t *bounce = NULL;
   bounce = malloc(BLOCK_SECTOR_SIZE);
@@ -232,25 +235,22 @@ bool cache_write_bytes(struct block *block, const block_sector_t sector_idx, voi
     memset (bounce, 0, BLOCK_SECTOR_SIZE);
   memcpy (bounce + sector_ofs, buffer, chunk_size);
   cache_write (fs_device,sector_idx,bounce);
-  free(bounce);
+  free (bounce);
   return true;
 }
 
-
-
-
-
-void cache_sync()
+void 
+cache_sync ()
 {
   int i = 0;
   lock_acquire(&cache.entry_num_lock);
   for (i = 0; i < cache.entry_num ; i++)
   {
-    lock_acquire(&(cache.cache_entrys[i].lock));
-    block_write(fs_device,cache.cache_entrys[i].sector,cache.cache_entrys[i].data);
-    lock_release(&(cache.cache_entrys[i].lock));
+    lock_acquire (&(cache.cache_entrys[i].lock));
+    block_write (fs_device,cache.cache_entrys[i].sector,cache.cache_entrys[i].data);
+    lock_release (&(cache.cache_entrys[i].lock));
   }
-  lock_release(&cache.entry_num_lock);
+  lock_release (&cache.entry_num_lock);
 };
 
 
@@ -590,11 +590,6 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
              into caller's buffer. */
           cache_read_bytes(fs_device, sector_idx, \
           buffer + bytes_read, sector_ofs,chunk_size);
-
-
-
-
-
         }
 
       /* Advance. */
@@ -603,7 +598,6 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       bytes_read += chunk_size;
     }
   free (bounce);
-
   return bytes_read;
 }
 
@@ -791,31 +785,13 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
         }
       else
         {
-          /* We need a bounce buffer. */
-          // if (bounce == NULL)
-          //   {
-          //     bounce = malloc (BLOCK_SECTOR_SIZE);
-          //     if (bounce == NULL)
-          //       break;
-          //   }
-          ASSERT(cache_write_bytes (fs_device,sector_idx,buffer+bytes_written,sector_ofs,chunk_size,sector_left));
-          /* If the sector contains data before or after the chunk
-             we're writing, then we need to read in the sector
-             first.  Otherwise we start with a sector of all zeros. */
-          // if (sector_ofs > 0 || chunk_size < sector_left)
-          //   cache_read (fs_device, sector_idx, bounce);
-          // else
-          //   memset (bounce, 0, BLOCK_SECTOR_SIZE);
-          // memcpy (bounce + sector_ofs, buffer + bytes_written, chunk_size);
-          // cache_write (fs_device, sector_idx, bounce);
+          cache_write_bytes (fs_device,sector_idx,buffer+bytes_written,sector_ofs,chunk_size,sector_left);
         }
-
       /* Advance. */
       size -= chunk_size;
       offset += chunk_size;
       bytes_written += chunk_size;
     }
-
   cache_write(fs_device, inode->sector, &disk_inode);
   free(bounce);
   return bytes_written;
@@ -850,7 +826,8 @@ inode_length (const struct inode *inode)
   return disk_inode.length;
 }
 
-bool inode_removed(struct inode* inode)
-  {
-    return inode -> removed;
-  }
+bool 
+inode_removed(struct inode* inode)
+{
+  return inode -> removed;
+}
