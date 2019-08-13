@@ -60,4 +60,5 @@ for `MKDIR`, we use `find_path` to get the real directory(current directory was 
 
 ## Reflection
 
-Josh primarily handled the second task, extendable files.  Zuxin worked on the third task dealing with directories.  Gary completed and explained the buffer cache. Handi wrote the student testing report and was in charge of overall synchronization.  Timeliness was once again a fairly large issue as the group had to eventually resort to a 6 hour worksession on Monday to focus on the persistence tests, the `dir-vine` test, and the student testing document.
+Josh primarily handled the second task, extendable files in both documents and implemented it in Pintos.  Zuxin worked on the third task dealing with directories for the final report as well as coding it.  Gary completed and explained the buffer cache in Pintos and both documents. Handi wrote the student testing report and was in charge of overall synchronization.  
+Timeliness was once again a fairly large issue as the group had to eventually resort to a 6 hour worksession on Monday to focus on the persistence tests, the `dir-vine` test, and the student testing document.
