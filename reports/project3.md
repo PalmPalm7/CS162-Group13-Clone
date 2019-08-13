@@ -58,6 +58,119 @@ for `CHDIR`, we first use `find_path` to get the real directory that contains th
 
 for `MKDIR`, we use `find_path` to get the real directory(current directory was stored in a `temp` pointer), then see if it contains such directory. If not, we create a new file with directory type, then we open up the new directory, and add . and .. directory entry, then close the new directory, and switch working directory back to `temp`, then close the real directory that stores the new directory.
 
+## Student Testing Report
+
+###my-test-1
+This test checks the buffer cache's ability to write to full blocks and not reading them first. The test case involves two new syscalls: `buffer_readcnt` and `buffer_writecnt` to get the number of block_read and block_write.
+
+- 200 times will certainly cause indirect blocks to be used and cause some since the kernel does not support extensible files.
+- In more make check, it actually does not pass the persistence test. We believe it is due to unnecesarry reads called in the test cases.
+
+######output
+```
+Copying tests/filesys/extended/my-test-1 to scratch partition...
+Copying tests/filesys/extended/tar to scratch partition...
+qemu -hda /tmp/BneSQ7nZuL.dsk -hdb tmp.dsk -m 4 -net none -nographic -monitor null
+PiLo hda1
+Loading...........
+Kernel command line: -q -f extract run my-test-1
+Pintos booting with 4,088 kB RAM...
+382 pages available in kernel pool.
+382 pages available in user pool.
+Calibrating timer...  223,232,000 loops/s.
+hda: 1,008 sectors (504 kB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 185 sectors (92 kB), Pintos OS kernel (20)
+hda2: 236 sectors (118 kB), Pintos scratch (22)
+hdb: 5,040 sectors (2 MB), model "QM00002", serial "QEMU HARDDISK"
+hdb1: 4,096 sectors (2 MB), Pintos file system (21)
+filesys: using hdb1
+scratch: using hda2
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'my-test-1' into the file system...
+Putting 'tar' into the file system...
+Erasing ustar archive...
+Executing 'my-test-1':
+(my-test-1) begin
+(my-test-1) create "file1"
+(my-test-1) open "file1"
+(my-test-1) writing 100KB (200 blocks) to "file1"
+(my-test-1) block_read is called 0 times in 200 times of writes
+(my-test-1) block_write is called 201 times in 200 times of writes
+(my-test-1) close "file1"
+(my-test-1) end
+my-test-1: exit(0)
+Execution of 'my-test-1' complete.
+Timer: 88 ticks
+Thread: 0 idle ticks, 77 kernel ticks, 11 user ticks
+hdb1 (filesys): 36 reads, 774 writes
+hda2 (scratch): 235 reads, 2 writes
+Console: 1253 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...
+```
+
+######result
+```
+PASS
+```
+
+###my-test-2
+This test checks the buffer cache's ability to write and read byte-to-byte while exceeding the maximum buffer size allowed. We call the buffer this way so we could expect a different result since twice the buffer size could cause write to re-write on what was already stored in buffer and slow down, slower than our implementation expected.
+
+######output
+```
+Copying tests/filesys/extended/my-test-2 to scratch partition...
+Copying tests/filesys/extended/tar to scratch partition...
+qemu -hda /tmp/8XKYEb7ALG.dsk -hdb tmp.dsk -m 4 -net none -nographic -monitor null
+PiLo hda1
+Loading...........
+Kernel command line: -q -f extract run my-test-2
+Pintos booting with 4,088 kB RAM...
+382 pages available in kernel pool.
+382 pages available in user pool.
+Calibrating timer...  226,508,800 loops/s.
+hda: 1,008 sectors (504 kB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 185 sectors (92 kB), Pintos OS kernel (20)
+hda2: 236 sectors (118 kB), Pintos scratch (22)
+hdb: 5,040 sectors (2 MB), model "QM00002", serial "QEMU HARDDISK"
+hdb1: 4,096 sectors (2 MB), Pintos file system (21)
+filesys: using hdb1
+scratch: using hda2
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'my-test-2' into the file system...
+Putting 'tar' into the file system...
+Erasing ustar archive...
+Executing 'my-test-2':
+(my-test-2) begin
+(my-test-2) create "file2"
+(my-test-2) open "file2"
+(my-test-2) writing 64KB to "file2"
+(my-test-2) block_read is called 36 times in 64 times of writes
+(my-test-2) block_write is called 545 times in 64 times of writes
+(my-test-2) close "file2"
+(my-test-2) end
+my-test-2: exit(0)
+Execution of 'my-test-2' complete.
+Timer: 79 ticks
+Thread: 0 idle ticks, 76 kernel ticks, 3 user ticks
+hdb1 (filesys): 36 reads, 577 writes
+hda2 (scratch): 235 reads, 2 writes
+Console: 1237 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...
+```
+
+######result
+```
+PASS
+```
+
 ## Reflection
 
 Josh primarily handled the second task, extendable files in both documents and implemented it in Pintos.  Zuxin worked on the third task dealing with directories for the final report as well as coding it.  Gary completed and explained the buffer cache in Pintos and both documents. Handi wrote the student testing report and was in charge of overall synchronization.  
