@@ -136,9 +136,23 @@ find_path(const struct dir *dir, const char *name,
           char *tail_name, struct dir *file_dir)
 {
   bool abs_path = false;
- 
-  ASSERT(dir != NULL);
+
+  if(dir == NULL)
+    dir = dir_open_current(); 
   ASSERT(name != NULL);
+
+  /*for a removed dir, always return false*/
+  if(inode_removed(dir -> inode))
+    return false;
+
+  /*if root path, return root with . entry*/
+  if(!strcmp (name, "/"))
+    {
+      tail_name[0] = '.';
+      tail_name[1] = '\0';
+      *file_dir = *(dir_open_root());
+      return true;
+    }
 
   /* if absolute path, then user root directory, and close it afterward*/
   if(name[0] == '/')
@@ -160,7 +174,6 @@ find_path(const struct dir *dir, const char *name,
      struct inode *in;
      if(!dir_lookup(now_dir, file_name, &in))
        {
-          printf("path directory wrong\n");
           return false;
        }
      if (now_dir != dir)
@@ -270,6 +283,28 @@ dir_remove (struct dir *dir, const char *name)
   if (!lookup (dir, name, &e, &ofs))
     goto done;
 
+  /* remove for the directory, it just check if there is any file*/
+  if(e.type == IS_DIR)
+    {
+      struct dir* dying_dir = dir_open (inode_open (e.inode_sector));
+      char ent_name[NAME_MAX+1];
+      if (dir_readdir(dying_dir, ent_name))
+        {
+          /*there is directory entry in the directory*/
+          dir_close(dying_dir);
+          goto done;
+        }
+      /* ban the directory access*/
+      struct dir_entry e;
+      lookup (dir, ".", &e, NULL);
+      e.in_use = false;
+      lookup (dir,"..", &e, NULL);
+      e.in_use = false;
+      dir_close(dying_dir);
+   }
+ 
+
+
   /* Open inode. */
   inode = inode_open (e.inode_sector);
   if (inode == NULL)
@@ -300,6 +335,8 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
   while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e)
     {
       dir->pos += sizeof e;
+      if (!strcmp (e.name, ".") || !strcmp (e.name, ".."))
+        continue;
       if (e.in_use)
         {
           strlcpy (name, e.name, NAME_MAX + 1);

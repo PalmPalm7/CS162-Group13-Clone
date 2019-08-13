@@ -147,7 +147,13 @@ syscall_handler (struct intr_frame *f)
      }
    case SYS_REMOVE: 
     {
-      f->eax = filesys_remove(args[1]);
+      
+      find_path (t-> work_dir, args[1], tail_name, next_dir);
+
+      struct dir *temp = t -> work_dir;
+      t -> work_dir = next_dir;
+      f->eax = filesys_remove(tail_name);
+      t -> work_dir = temp;
       break;
     } 
 
@@ -181,10 +187,15 @@ syscall_handler (struct intr_frame *f)
          struct file *open_file = file_open (inode_open (dirent -> inode_sector));
     	  if (open_file != NULL)
             {
-    	      struct file_info *f1 = create_files_struct (open_file);
-              f1 -> dirent = dirent;
-  	      list_push_back (&thread_current()->open_list, &f1->elem);
-  	      f->eax = f1->file_descriptor;
+    	      struct file_info *fi = create_files_struct (open_file);
+              fi -> dirent = dirent;
+  	      list_push_back (&thread_current()->open_list, &fi->elem);
+  	      f->eax = fi->file_descriptor;
+              if(dirent -> type == IS_DIR)
+                {
+                  file_close(fi -> file);
+                  fi -> file  = NULL;
+                }
   	    } 
           else 
             {
@@ -251,6 +262,14 @@ syscall_handler (struct intr_frame *f)
                struct dir* temp = t-> work_dir;
                t -> work_dir = next_dir;
                f -> eax = filesys_create(tail_name, 512, IS_DIR);
+               /* dive into the newly create directory, then add . and .. into it*/
+               struct inode* new_dir_inode;
+               dir_lookup(next_dir, tail_name, &new_dir_inode);
+               struct dir* new_dir = dir_open (new_dir_inode);
+               dir_add (next_dir, "..", inode_get_inumber(next_dir -> inode), IS_DIR);
+               dir_add (new_dir, ".", inode_get_inumber(new_dir -> inode), IS_DIR);
+               dir_close(new_dir);
+
                t -> work_dir = temp;
                dir_close(next_dir);
              }
@@ -262,8 +281,22 @@ syscall_handler (struct intr_frame *f)
    case SYS_READDIR:
      {
        struct file_info *dir_fd = files_helper (args[1]);
-       struct dir *dir_r = dir_open ( inode_open(dir_fd -> dirent -> inode_sector));
-       f -> eax = dir_readdir(dir_r, args[2]);
+       if(dir_fd -> file == NULL)
+          dir_fd -> file = dir_open (inode_open(dir_fd -> dirent -> inode_sector));
+       f -> eax = dir_readdir(dir_fd -> file, args[2]);
+       break;
+     }
+   case SYS_ISDIR:
+     {
+       struct file_info *dir_fd = files_helper (args[1]);
+       f -> eax = dir_fd -> dirent -> type == IS_DIR ? true : false;
+       break;
+     }
+   case SYS_INUMBER:
+     {
+       struct file_info *dir_fd = files_helper (args[1]);
+       f -> eax = dir_fd -> dirent -> inode_sector;
+       break;
      }
    default:
     {
@@ -296,8 +329,15 @@ syscall_handler (struct intr_frame *f)
                  }
                else 
                 {
+                  if (curr_file->file_descriptor == thread_current()->fd_count) 
+                    {
+                      thread_current()->fd_count = thread_current()->fd_count - 1;
+                    }
                   list_remove(&curr_file->elem);
-    	          file_close(curr_file->file);
+                  if(curr_file -> dirent -> type == IS_REG)
+    	            file_close (curr_file->file);
+                  else
+                    dir_close (curr_file ->file);
                   free(curr_file -> dirent);
     	          free(curr_file);
                  }
@@ -410,9 +450,6 @@ files_helper (int fd)
       f = list_entry (e, struct file_info, elem);
       if (f->file_descriptor == fd)
       {
-        if (f->file_descriptor == maxfd) {
-          thread_current()->fd_count = thread_current()->fd_count - 1;
-        }
         return f;
       }
       if (f->file_descriptor >= maxfd) {
